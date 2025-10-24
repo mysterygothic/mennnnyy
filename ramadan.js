@@ -1269,10 +1269,24 @@ async function syncFromTelegram(replaceAll = false) {
             finalOrders = newOrders.sort((a, b) => a.serialNumber - b.serialNumber);
             message = `✅ تم استبدال جميع الطلبات!\n📦 تم تحميل ${newOrders.length} طلب من التليجرام`;
         } else {
-            // Merge - add ALL orders from Telegram with NEW serial numbers
+            // Merge - only add NEW orders (skip duplicates based on phone number)
+            const existingPhones = new Set(currentOrders.map(o => normalizePhone(o.phoneNumber)));
+            let serialCounter = maxSerialNumber;
+            let skippedCount = 0;
+            
             const newOrders = allData.map((row, index) => {
-                // Always give new serial number = max + index + 1
-                const newSerialNumber = maxSerialNumber + index + 1;
+                const phoneNumber = row['رقم التلفون'] || '-';
+                const normalizedPhone = normalizePhone(phoneNumber);
+                
+                // Skip if phone number already exists
+                if (existingPhones.has(normalizedPhone)) {
+                    skippedCount++;
+                    return null;
+                }
+                
+                // Give new serial number
+                serialCounter++;
+                const newSerialNumber = serialCounter;
                 
                 const priceMatch = row['المجموع'] ? row['المجموع'].match(/[\d.]+/) : null;
                 const totalAmount = priceMatch ? parseFloat(priceMatch[0]) : 0;
@@ -1282,11 +1296,14 @@ async function syncFromTelegram(replaceAll = false) {
                     deliveryType = row['توصيل او استلام'];
                 }
                 
+                // Add to existing phones set
+                existingPhones.add(normalizedPhone);
+                
                 return {
                     id: Date.now() + index,
                     serialNumber: newSerialNumber,
                     customerName: row['اسم العميل'] || 'غير معروف',
-                    phoneNumber: row['رقم التلفون'] || '-',
+                    phoneNumber: phoneNumber,
                     deliveryType: deliveryType,
                     deliveryAddress: row['عنوان التوصيل'] || '-',
                     otherDetails: row['تفاصيل أخرى'] || '-',
@@ -1301,11 +1318,16 @@ async function syncFromTelegram(replaceAll = false) {
                     totalAmount: totalAmount,
                     date: new Date().toISOString()
                 };
-            });
+            }).filter(order => order !== null); // Remove skipped (null) orders
             
-            // Add all new orders to existing ones
+            // Add only new orders to existing ones
             finalOrders = [...currentOrders, ...newOrders].sort((a, b) => a.serialNumber - b.serialNumber);
-            message = `✅ تم دمج الطلبات!\n📦 تم إضافة ${newOrders.length} طلب جديد بأرقام تسلسلية جديدة`;
+            
+            // Build message with stats
+            message = `✅ تم دمج الطلبات!\n📦 تم إضافة ${newOrders.length} طلب جديد`;
+            if (skippedCount > 0) {
+                message += `\n⚠️ تم تجاهل ${skippedCount} طلب مكرر (رقم تلفون موجود مسبقاً)`;
+            }
         }
         
         // Save
