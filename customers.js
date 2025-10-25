@@ -36,6 +36,9 @@ function renderCustomersTable(customers) {
             <td>${customer.order_count || customer.orderCount || 0}</td>
             <td><strong style="color: #27ae60;">${(customer.total_spent || customer.totalSpent || 0).toFixed(2)} دينار</strong></td>
             <td>${formatDate(customer.last_order_date || customer.lastOrderDate)}</td>
+            <td>
+                <button class="action-btn delete-order-btn" onclick="confirmDeleteCustomer(${customer.id})" title="حذف">🗑️</button>
+            </td>
         </tr>
     `).join('');
 }
@@ -83,6 +86,23 @@ function searchCustomers() {
 function clearCustomerSearch() {
     document.getElementById('searchCustomers').value = '';
     renderCustomersTable(allCustomers);
+}
+
+async function confirmDeleteCustomer(customerId) {
+    const confirmed = confirm('⚠️ هل أنت متأكد من حذف هذا الزبون؟\n\nسيتم حذف جميع معلوماته من قاعدة البيانات.');
+    
+    if (!confirmed) return;
+    
+    try {
+        await window.DB.deleteCustomer(customerId);
+        
+        await loadCustomers();
+        
+        alert('✅ تم حذف الزبون بنجاح');
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('❌ حدث خطأ في حذف الزبون');
+    }
 }
 
 async function exportCustomers() {

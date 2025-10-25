@@ -1418,9 +1418,6 @@ async function openAssignDriverModal(orderId) {
     // المبلغ النقدي = سعر الطلب تلقائياً
     const cashAmount = order.cash_amount || order.cashAmount || order.totalAmount || 0;
     document.getElementById('assignCashAmount').value = cashAmount;
-    document.getElementById('assignCashAmount').readOnly = true; // للقراءة فقط
-    
-    document.getElementById('assignDeliveryNotes').value = order.delivery_notes || order.deliveryNotes || '';
     
     // Show modal
     const modal = document.getElementById('assignDriverModal');
@@ -1449,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', function() {
 async function saveDriverAssignment() {
     const orderId = parseInt(document.getElementById('assignOrderId').value);
     const driverId = parseInt(document.getElementById('assignDriverSelect').value);
-    const deliveryNotes = document.getElementById('assignDeliveryNotes').value;
+    const cashAmount = parseFloat(document.getElementById('assignCashAmount').value) || 0;
     
     if (!driverId) {
         alert('يرجى اختيار سائق');
@@ -1475,17 +1472,12 @@ async function saveDriverAssignment() {
             return;
         }
         
-        // المبلغ النقدي = سعر الطلب تلقائياً
-        const cashAmount = orders[orderIndex].totalAmount || 0;
-        
         orders[orderIndex].driver_id = driverId;
         orders[orderIndex].driverId = driverId;
         orders[orderIndex].driver_name = driver.name;
         orders[orderIndex].driverName = driver.name;
         orders[orderIndex].cash_amount = cashAmount;
         orders[orderIndex].cashAmount = cashAmount;
-        orders[orderIndex].delivery_notes = deliveryNotes;
-        orders[orderIndex].deliveryNotes = deliveryNotes;
         orders[orderIndex].delivery_status = 'assigned';
         orders[orderIndex].deliveryStatus = 'assigned';
         

@@ -362,28 +362,19 @@
             
             <form id="assignDriverForm" class="admin-form">
                 <input type="hidden" id="assignOrderId">
+                <input type="hidden" id="assignCashAmount">
                 
                 <div class="form-group">
                     <label for="assignDriverSelect">اختر السائق *</label>
                     <select id="assignDriverSelect" required>
                         <option value="">-- اختر سائق --</option>
                     </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="assignCashAmount">المبلغ النقدي المطلوب من السائق (تلقائي = سعر الطلب)</label>
-                    <input type="number" id="assignCashAmount" min="0" step="0.01" value="0" readonly style="background: #f0f0f0; cursor: not-allowed;">
-                    <small style="color: #7f8c8d; font-size: 12px; display: block; margin-top: 5px;">💡 المبلغ يُحدد تلقائياً من سعر الطلب</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="assignDeliveryNotes">ملاحظات التوصيل</label>
-                    <textarea id="assignDeliveryNotes" rows="3" placeholder="ملاحظات للسائق..."></textarea>
+                    <small style="color: #7f8c8d; font-size: 12px; display: block; margin-top: 5px;">💡 المبلغ النقدي = سعر الطلب تلقائياً</small>
                 </div>
                 
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" onclick="closeAssignDriverModal()">إلغاء</button>
-                    <button type="submit" class="btn-primary">حفظ</button>
+                    <button type="submit" class="btn-primary">تعيين السائق</button>
                 </div>
             </form>
         </div>
