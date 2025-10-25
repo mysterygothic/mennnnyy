@@ -44,8 +44,24 @@
             <!-- Food items will be populated by JavaScript -->
         </div>
 
+        <!-- Floating Cart Button (Mobile Only) -->
+        <button class="floating-cart-btn" id="floatingCartBtn" onclick="toggleCartSection()">
+            <span>🛒</span>
+            <span>عرض السلة</span>
+            <span class="cart-badge" id="floatingCartBadge">0</span>
+        </button>
+
         <!-- Cart Section -->
         <div class="cart-section" id="cartSection">
+            <!-- Cart Toggle Header (Mobile Only) -->
+            <div class="cart-toggle-header" onclick="toggleCartMinimize()">
+                <div>
+                    <span style="font-size: 1.2em; font-weight: 700; color: #d47222;">سلة الطلبات</span>
+                    <span style="margin-right: 10px; background: #d47222; color: #fff; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;" id="mobileCartCount">0</span>
+                </div>
+                <span class="cart-toggle-icon">▼</span>
+            </div>
+            
             <div class="cart-header">
                 <h3>سلة الطلبات</h3>
                 <span class="cart-count" id="cartCount">0</span>
