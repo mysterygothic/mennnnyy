@@ -276,6 +276,8 @@ h1, h2, h3 {
     z-index: 100;
     transform: translateY(100%);
     transition: transform 0.3s ease;
+    max-height: 70vh;
+    overflow-y: auto;
 }
 
 .cart-section.visible {
@@ -685,11 +687,98 @@ h1, h2, h3 {
     transform: translateY(-2px);
 }
 
+/* Floating Cart Button (Mobile) */
+.floating-cart-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #d47222 0%, #e88230 100%);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 25px;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(212, 114, 34, 0.5);
+    z-index: 99;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    animation: bounceIn 0.5s ease;
+}
+
+.floating-cart-btn.visible {
+    display: flex;
+}
+
+.floating-cart-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(212, 114, 34, 0.6);
+}
+
+.floating-cart-btn .cart-badge {
+    background: #fff;
+    color: #d47222;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.9em;
+    animation: pulse 2s ease infinite;
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Cart Toggle for Mobile */
+.cart-toggle-header {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: rgba(212, 114, 34, 0.2);
+    border-radius: 15px 15px 0 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cart-toggle-header:active {
+    background: rgba(212, 114, 34, 0.3);
+}
+
+.cart-toggle-icon {
+    font-size: 1.5em;
+    transition: transform 0.3s ease;
+}
+
+.cart-section.minimized .cart-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.cart-section.minimized .cart-items,
+.cart-section.minimized .cart-total {
+    display: none;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .food-items-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+        padding-bottom: 100px;
     }
     
     .food-categories {
@@ -702,34 +791,63 @@ h1, h2, h3 {
     }
     
     .cart-section {
+        padding: 0;
+        border-radius: 20px 20px 0 0;
+        max-height: 80vh;
+    }
+    
+    .cart-toggle-header {
+        display: flex;
+    }
+    
+    .cart-header {
         padding: 15px;
+        padding-top: 0;
+    }
+    
+    .cart-items {
+        padding: 0 15px;
+        max-height: 250px;
     }
     
     .cart-total {
-        flex-direction: column;
+        padding: 15px;
+        flex-direction: row;
         gap: 15px;
+        background: rgba(212, 114, 34, 0.1);
+        position: sticky;
+        bottom: 0;
     }
     
     .checkout-btn {
         max-width: none;
-        width: 100%;
+        flex: 1;
+        padding: 18px 30px;
+        font-size: 1.15em;
+    }
+    
+    .floating-cart-btn.visible {
+        display: flex;
     }
     
     .food-item-actions {
-        flex-direction: column;
+        flex-direction: row;
         gap: 10px;
     }
     
     .quantity-controls {
-        order: 2;
+        order: 1;
+        flex: 0 0 auto;
     }
     
     .add-to-cart-btn {
-        order: 1;
+        order: 2;
+        flex: 1;
+        padding: 12px 20px;
     }
 
     .meat-options {
-        flex-direction: column;
+        flex-direction: row;
         gap: 8px;
     }
 
@@ -783,5 +901,36 @@ h1, h2, h3 {
         width: 100%;
         padding: 12px 20px;
         font-size: 1em;
+    }
+    
+    /* Better mobile form */
+    .customer-form {
+        padding: 20px 15px;
+    }
+    
+    .customer-form .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .customer-form .form-group label {
+        font-size: 1.1em;
+    }
+    
+    .customer-form .form-group input,
+    .customer-form .form-group textarea {
+        padding: 14px;
+        font-size: 1em;
+    }
+    
+    .customer-form .form-actions {
+        gap: 10px;
+        margin-top: 25px;
+    }
+    
+    .customer-form .cancel-btn,
+    .customer-form .submit-btn {
+        padding: 14px 25px;
+        font-size: 1.1em;
+        flex: 1;
     }
 }
