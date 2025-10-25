@@ -80,9 +80,12 @@ async function loadRamadanOrders(ordersToDisplay = null) {
             <td><span class="badge ${order.deliveryType === 'توصيل' ? 'badge-delivery' : 'badge-pickup'}">${order.deliveryType}</span></td>
             <td>${order.deliveryType === 'توصيل' ? (order.deliveryAddress || '-') : '-'}</td>
             <td>
-                ${order.driver_name || order.driverName ? 
-                    `<span class="badge badge-delivery">${order.driver_name || order.driverName}</span>` : 
-                    `<button class="action-btn" onclick="openAssignDriverModal(${order.id})" title="تعيين سائق" style="background: #28a745;">🚗</button>`
+                ${order.deliveryType === 'توصيل' ? 
+                    (order.driver_name || order.driverName ? 
+                        `<span class="badge badge-delivery">${order.driver_name || order.driverName}</span>` : 
+                        `<button class="action-btn" onclick="openAssignDriverModal(${order.id})" title="تعيين سائق" style="background: #28a745;">🚗</button>`
+                    ) : 
+                    '<span style="color: #95a5a6;">-</span>'
                 }
             </td>
             <td>${order.cash_amount || order.cashAmount ? `${order.cash_amount || order.cashAmount} د` : '-'}</td>
@@ -1405,7 +1408,12 @@ async function openAssignDriverModal(orderId) {
     if (order.driver_id || order.driverId) {
         select.value = order.driver_id || order.driverId;
     }
-    document.getElementById('assignCashAmount').value = order.cash_amount || order.cashAmount || 0;
+    
+    // المبلغ النقدي = سعر الطلب تلقائياً
+    const cashAmount = order.cash_amount || order.cashAmount || order.totalAmount || 0;
+    document.getElementById('assignCashAmount').value = cashAmount;
+    document.getElementById('assignCashAmount').readOnly = true; // للقراءة فقط
+    
     document.getElementById('assignDeliveryNotes').value = order.delivery_notes || order.deliveryNotes || '';
     
     // Show modal
@@ -1435,7 +1443,6 @@ document.addEventListener('DOMContentLoaded', function() {
 async function saveDriverAssignment() {
     const orderId = parseInt(document.getElementById('assignOrderId').value);
     const driverId = parseInt(document.getElementById('assignDriverSelect').value);
-    const cashAmount = parseFloat(document.getElementById('assignCashAmount').value) || 0;
     const deliveryNotes = document.getElementById('assignDeliveryNotes').value;
     
     if (!driverId) {
@@ -1461,6 +1468,9 @@ async function saveDriverAssignment() {
             alert('الطلب غير موجود');
             return;
         }
+        
+        // المبلغ النقدي = سعر الطلب تلقائياً
+        const cashAmount = orders[orderIndex].totalAmount || 0;
         
         orders[orderIndex].driver_id = driverId;
         orders[orderIndex].driverId = driverId;
@@ -1495,4 +1505,31 @@ window.addEventListener('click', function(event) {
         closeAssignDriverModal();
     }
 });
+
+// ========== DELETE ALL ORDERS ==========
+
+async function confirmDeleteAllOrders() {
+    const confirmed = confirm('⚠️ تحذير!\n\nهل أنت متأكد من حذف جميع الطلبات؟\n\nهذا الإجراء لا يمكن التراجع عنه!\n\nسيتم حذف جميع طلبات رمضان من قاعدة البيانات.');
+    
+    if (!confirmed) return;
+    
+    // تأكيد مزدوج للأمان
+    const doubleConfirm = confirm('⚠️ تأكيد نهائي!\n\nاكتب "نعم" للتأكيد (اضغط OK للمتابعة أو Cancel للإلغاء)');
+    
+    if (!doubleConfirm) return;
+    
+    try {
+        await window.DB.deleteAllRamadanOrders();
+        
+        // Reload page
+        await loadRamadanOrders();
+        await updateRamadanStats();
+        
+        alert('✅ تم حذف جميع الطلبات بنجاح!\n\nيمكنك الآن البدء بيوم جديد 🌟');
+        
+    } catch (error) {
+        console.error('Error deleting all orders:', error);
+        alert('❌ حدث خطأ في حذف الطلبات');
+    }
+}
 

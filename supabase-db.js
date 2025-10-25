@@ -638,6 +638,285 @@ async function deleteDriver(driverId) {
     }
 }
 
+// ========== CUSTOMERS OPERATIONS ==========
+
+/**
+ * Get all customers
+ * @returns {Promise<Array>} Array of customers
+ */
+async function getCustomers() {
+    if (useLocalStorageFallback || !supabase) {
+        const data = localStorage.getItem('customers');
+        return data ? JSON.parse(data) : [];
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('customers')
+            .select('*')
+            .order('last_order_date', { ascending: false });
+        
+        if (error) throw error;
+        
+        return data || [];
+    } catch (error) {
+        console.error('Error fetching customers:', error);
+        const data = localStorage.getItem('customers');
+        return data ? JSON.parse(data) : [];
+    }
+}
+
+/**
+ * Save or update customer
+ * @param {Object} customer - Customer object
+ * @returns {Promise<boolean>} Success status
+ */
+async function saveCustomer(customer) {
+    // Always save to localStorage as cache
+    const customers = await getCustomers();
+    const existingIndex = customers.findIndex(c => c.phone_number === customer.phone_number || c.phoneNumber === customer.phoneNumber);
+    
+    if (existingIndex >= 0) {
+        customers[existingIndex] = customer;
+    } else {
+        customers.push(customer);
+    }
+    localStorage.setItem('customers', JSON.stringify(customers));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const dbCustomer = {
+            customer_name: customer.customer_name || customer.customerName,
+            phone_number: customer.phone_number || customer.phoneNumber,
+            delivery_address: customer.delivery_address || customer.deliveryAddress || null,
+            order_count: customer.order_count || customer.orderCount || 1,
+            total_spent: customer.total_spent || customer.totalSpent || 0,
+            last_order_date: customer.last_order_date || customer.lastOrderDate || new Date().toISOString(),
+            notes: customer.notes || null,
+            updated_at: new Date().toISOString()
+        };
+        
+        // Use upsert (insert or update)
+        const { error } = await supabase
+            .from('customers')
+            .upsert([dbCustomer], { onConflict: 'phone_number' });
+        
+        if (error) throw error;
+        
+        console.log('✅ Customer saved to database');
+        return true;
+    } catch (error) {
+        console.error('Error saving customer:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete customer
+ * @param {number} customerId - Customer ID to delete
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteCustomer(customerId) {
+    // Always delete from localStorage cache
+    const customers = await getCustomers();
+    const filtered = customers.filter(customer => customer.id !== customerId);
+    localStorage.setItem('customers', JSON.stringify(filtered));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('customers')
+            .delete()
+            .eq('id', customerId);
+        
+        if (error) throw error;
+        
+        console.log('✅ Customer deleted from database');
+        return true;
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        return false;
+    }
+}
+
+// ========== ADMIN USERS OPERATIONS ==========
+
+/**
+ * Get all admin users
+ * @returns {Promise<Array>} Array of admin users
+ */
+async function getAdminUsers() {
+    if (useLocalStorageFallback || !supabase) {
+        const data = localStorage.getItem('admin_users');
+        return data ? JSON.parse(data) : [];
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        return data || [];
+    } catch (error) {
+        console.error('Error fetching admin users:', error);
+        const data = localStorage.getItem('admin_users');
+        return data ? JSON.parse(data) : [];
+    }
+}
+
+/**
+ * Verify admin user login
+ * @param {string} username - Username
+ * @param {string} password - Password
+ * @returns {Promise<Object|null>} User object if valid, null otherwise
+ */
+async function verifyAdminLogin(username, password) {
+    if (useLocalStorageFallback || !supabase) {
+        return null;
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('username', username)
+            .eq('password_hash', password) // Note: In production, use proper password hashing!
+            .eq('is_active', true)
+            .single();
+        
+        if (error) throw error;
+        
+        return data;
+    } catch (error) {
+        console.error('Error verifying admin login:', error);
+        return null;
+    }
+}
+
+/**
+ * Save admin user (create or update)
+ * @param {Object} user - Admin user object
+ * @returns {Promise<boolean>} Success status
+ */
+async function saveAdminUser(user) {
+    // Always save to localStorage as cache
+    const users = await getAdminUsers();
+    const existingIndex = users.findIndex(u => u.id === user.id);
+    
+    if (existingIndex >= 0) {
+        users[existingIndex] = user;
+    } else {
+        users.push(user);
+    }
+    localStorage.setItem('admin_users', JSON.stringify(users));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const dbUser = {
+            username: user.username,
+            password_hash: user.password || user.password_hash || user.passwordHash,
+            full_name: user.full_name || user.fullName,
+            role: user.role || 'admin',
+            is_active: user.is_active !== undefined ? user.is_active : true,
+            updated_at: new Date().toISOString()
+        };
+        
+        if (user.id && typeof user.id === 'number' && user.id < 1000000000000) {
+            // Update existing
+            const { error } = await supabase
+                .from('admin_users')
+                .update(dbUser)
+                .eq('id', user.id);
+            
+            if (error) throw error;
+        } else {
+            // Insert new
+            const { error } = await supabase
+                .from('admin_users')
+                .insert([dbUser]);
+            
+            if (error) throw error;
+        }
+        
+        console.log('✅ Admin user saved to database');
+        return true;
+    } catch (error) {
+        console.error('Error saving admin user:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete admin user
+ * @param {number} userId - User ID to delete
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteAdminUser(userId) {
+    // Always delete from localStorage cache
+    const users = await getAdminUsers();
+    const filtered = users.filter(user => user.id !== userId);
+    localStorage.setItem('admin_users', JSON.stringify(filtered));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('admin_users')
+            .delete()
+            .eq('id', userId);
+        
+        if (error) throw error;
+        
+        console.log('✅ Admin user deleted from database');
+        return true;
+    } catch (error) {
+        console.error('Error deleting admin user:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete all Ramadan orders
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteAllRamadanOrders() {
+    // Clear localStorage
+    localStorage.setItem(STORAGE_KEYS.RAMADAN_ORDERS, JSON.stringify([]));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('ramadan_orders')
+            .delete()
+            .neq('id', 0); // Delete all rows
+        
+        if (error) throw error;
+        
+        console.log('✅ All Ramadan orders deleted from database');
+        return true;
+    } catch (error) {
+        console.error('Error deleting all Ramadan orders:', error);
+        return false;
+    }
+}
+
 // Export functions for global use
 if (typeof window !== 'undefined') {
     window.DB = {
@@ -656,11 +935,23 @@ if (typeof window !== 'undefined') {
         saveRamadanOrder,
         saveRamadanOrders,
         deleteRamadanOrder,
+        deleteAllRamadanOrders,
         
         // Drivers
         getDrivers,
         saveDriver,
         deleteDriver,
+        
+        // Customers
+        getCustomers,
+        saveCustomer,
+        deleteCustomer,
+        
+        // Admin Users
+        getAdminUsers,
+        verifyAdminLogin,
+        saveAdminUser,
+        deleteAdminUser,
         
         // Utilities
         isUsingSupabase,
