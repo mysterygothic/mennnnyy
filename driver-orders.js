@@ -13,15 +13,21 @@ async function loadDriverOrders() {
     try {
         // Get all drivers
         const drivers = await window.DB.getDrivers();
+        console.log('Drivers loaded:', drivers);
         
         // Get all Ramadan orders
         const allOrders = await window.DB.getRamadanOrders();
+        console.log('All orders loaded:', allOrders);
         
-        // Filter orders that have a driver assigned
-        const ordersWithDrivers = allOrders.filter(order => 
-            (order.driver_id || order.driverId) && 
-            (order.deliveryType === 'توصيل')
-        );
+        // Filter orders that have a driver assigned AND are delivery type
+        const ordersWithDrivers = allOrders.filter(order => {
+            const hasDriver = (order.driver_id || order.driverId);
+            const isDelivery = (order.deliveryType === 'توصيل' || order.delivery_type === 'توصيل');
+            console.log(`Order ${order.id}: hasDriver=${hasDriver}, isDelivery=${isDelivery}, driverId=${order.driver_id || order.driverId}`);
+            return hasDriver && isDelivery;
+        });
+        
+        console.log('Orders with drivers:', ordersWithDrivers);
         
         // Group orders by driver
         const driverOrdersMap = {};
@@ -33,8 +39,13 @@ async function loadDriverOrders() {
                 driverOrdersMap[driverId] = [];
             }
             driverOrdersMap[driverId].push(order);
-            grandTotal += parseFloat(order.cash_amount || order.cashAmount || order.totalAmount || 0);
+            const cashAmount = parseFloat(order.cash_amount || order.cashAmount || order.totalAmount || 0);
+            grandTotal += cashAmount;
+            console.log(`Added order to driver ${driverId}, cash amount: ${cashAmount}`);
         });
+        
+        console.log('Driver orders map:', driverOrdersMap);
+        console.log('Grand total:', grandTotal);
         
         // Render
         renderDriverOrders(drivers, driverOrdersMap, grandTotal);

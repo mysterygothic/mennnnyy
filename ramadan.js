@@ -530,6 +530,9 @@ async function submitRamadanOrder() {
     orders.push(newOrder);
     await saveRamadanOrders(orders);
     
+    // Save customer info to customers database
+    await saveCustomerInfo(newOrder);
+    
     // Clear cart and form
     ramadanCart = [];
     updateRamadanCartDisplay();
@@ -1062,6 +1065,9 @@ async function submitQuickEntry() {
     orders.push(newOrder);
     await saveRamadanOrders(orders);
     
+    // Save customer info to customers database
+    await saveCustomerInfo(newOrder);
+    
     // Update session count
     quickEntrySessionCount++;
     updateQuickEntryCount();
@@ -1505,6 +1511,64 @@ window.addEventListener('click', function(event) {
         closeAssignDriverModal();
     }
 });
+
+// ========== SAVE CUSTOMER INFO ==========
+
+async function saveCustomerInfo(order) {
+    try {
+        if (!order.customerName || !order.phoneNumber) {
+            console.warn('Customer info incomplete, skipping save');
+            return;
+        }
+        
+        // Get existing customers
+        const customers = await window.DB.getCustomers();
+        
+        // Normalize phone number for comparison
+        const normalizedPhone = normalizePhone(order.phoneNumber);
+        
+        // Find existing customer by phone number
+        const existingCustomer = customers.find(c => 
+            normalizePhone(c.phone_number || c.phoneNumber) === normalizedPhone
+        );
+        
+        const deliveryAddress = order.deliveryType === 'توصيل' ? (order.deliveryAddress || '') : '';
+        
+        if (existingCustomer) {
+            // Update existing customer
+            const updatedCustomer = {
+                id: existingCustomer.id,
+                customer_name: order.customerName,
+                phone_number: order.phoneNumber,
+                delivery_address: deliveryAddress || existingCustomer.delivery_address || existingCustomer.deliveryAddress,
+                order_count: (existingCustomer.order_count || existingCustomer.orderCount || 0) + 1,
+                total_spent: parseFloat(existingCustomer.total_spent || existingCustomer.totalSpent || 0) + parseFloat(order.totalAmount || 0),
+                last_order_date: new Date().toISOString(),
+                first_order_date: existingCustomer.first_order_date || existingCustomer.firstOrderDate || new Date().toISOString()
+            };
+            
+            await window.DB.saveCustomer(updatedCustomer);
+            console.log('✅ Customer updated:', updatedCustomer);
+        } else {
+            // Create new customer
+            const newCustomer = {
+                customer_name: order.customerName,
+                phone_number: order.phoneNumber,
+                delivery_address: deliveryAddress,
+                order_count: 1,
+                total_spent: parseFloat(order.totalAmount || 0),
+                last_order_date: new Date().toISOString(),
+                first_order_date: new Date().toISOString()
+            };
+            
+            await window.DB.saveCustomer(newCustomer);
+            console.log('✅ New customer saved:', newCustomer);
+        }
+    } catch (error) {
+        console.error('Error saving customer info:', error);
+        // Don't throw error - customer save failure shouldn't block order
+    }
+}
 
 // ========== DELETE ALL ORDERS ==========
 
