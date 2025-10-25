@@ -303,7 +303,18 @@ async function getRamadanOrders() {
             otherDetails: order.other_details,
             items: order.items,
             totalAmount: order.total_amount,
-            date: order.order_date
+            date: order.order_date,
+            // Driver fields
+            driver_id: order.driver_id,
+            driverId: order.driver_id,
+            driver_name: order.driver_name,
+            driverName: order.driver_name,
+            cash_amount: order.cash_amount,
+            cashAmount: order.cash_amount,
+            delivery_status: order.delivery_status,
+            deliveryStatus: order.delivery_status,
+            delivery_notes: order.delivery_notes,
+            deliveryNotes: order.delivery_notes
         }));
     } catch (error) {
         console.error('Error fetching Ramadan orders:', error);
