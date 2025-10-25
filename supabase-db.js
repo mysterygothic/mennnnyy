@@ -344,7 +344,12 @@ async function saveRamadanOrder(order) {
             other_details: order.otherDetails,
             items: order.items,
             total_amount: order.totalAmount,
-            order_date: order.date
+            order_date: order.date,
+            driver_id: order.driver_id || order.driverId || null,
+            driver_name: order.driver_name || order.driverName || null,
+            cash_amount: order.cash_amount || order.cashAmount || 0,
+            delivery_status: order.delivery_status || order.deliveryStatus || 'pending',
+            delivery_notes: order.delivery_notes || order.deliveryNotes || null
         };
         
         if (order.id && order.id > 1000000000000) {
@@ -406,7 +411,12 @@ async function saveRamadanOrders(orders) {
             other_details: order.otherDetails,
             items: order.items,
             total_amount: order.totalAmount,
-            order_date: order.date
+            order_date: order.date,
+            driver_id: order.driver_id || order.driverId || null,
+            driver_name: order.driver_name || order.driverName || null,
+            cash_amount: order.cash_amount || order.cashAmount || 0,
+            delivery_status: order.delivery_status || order.deliveryStatus || 'pending',
+            delivery_notes: order.delivery_notes || order.deliveryNotes || null
         }));
         
         const { error } = await supabase

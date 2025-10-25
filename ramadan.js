@@ -66,7 +66,7 @@ async function loadRamadanOrders(ordersToDisplay = null) {
     const duplicatePhones = new Set(Object.keys(phoneCounts).filter(p => phoneCounts[p] > 1));
     
     if (orders.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">لا توجد طلبات</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-state">لا توجد طلبات</td></tr>';
         return;
     }
     
@@ -79,11 +79,22 @@ async function loadRamadanOrders(ordersToDisplay = null) {
             <td>${duplicatePhones.has(normalizePhone(order.phoneNumber)) ? `<span class="badge badge-duplicate" title="رقم مكرر">${order.phoneNumber}</span>` : order.phoneNumber}</td>
             <td><span class="badge ${order.deliveryType === 'توصيل' ? 'badge-delivery' : 'badge-pickup'}">${order.deliveryType}</span></td>
             <td>${order.deliveryType === 'توصيل' ? (order.deliveryAddress || '-') : '-'}</td>
+            <td>
+                ${order.driver_name || order.driverName ? 
+                    `<span class="badge badge-delivery">${order.driver_name || order.driverName}</span>` : 
+                    `<button class="action-btn" onclick="openAssignDriverModal(${order.id})" title="تعيين سائق" style="background: #28a745;">🚗</button>`
+                }
+            </td>
+            <td>${order.cash_amount || order.cashAmount ? `${order.cash_amount || order.cashAmount} د` : '-'}</td>
             <td>${order.otherDetails || '-'}</td>
             <td>${formatDate(order.date)}</td>
             <td>
                 <button class="action-btn edit-order-btn" onclick="openEditOrderModal(${order.id})" title="تعديل">✏️</button>
                 <button class="action-btn view-btn" onclick="viewOrder(${order.id})" title="عرض">👁️</button>
+                ${order.driver_name || order.driverName ? 
+                    `<button class="action-btn" onclick="openAssignDriverModal(${order.id})" title="تعديل السائق" style="background: #ffc107;">🚗</button>` : 
+                    ''
+                }
                 <button class="action-btn delete-order-btn" onclick="openDeleteOrderModal(${order.id})" title="حذف">🗑️</button>
             </td>
         </tr>
@@ -1363,4 +1374,125 @@ async function syncFromTelegram(replaceAll = false) {
         btn.textContent = originalText;
     }
 }
+
+// ========== DRIVER ASSIGNMENT FUNCTIONS ==========
+
+let currentAssignOrderId = null;
+
+async function openAssignDriverModal(orderId) {
+    currentAssignOrderId = orderId;
+    
+    // Get order details
+    const orders = await getRamadanOrders();
+    const order = orders.find(o => o.id === orderId);
+    
+    if (!order) {
+        alert('الطلب غير موجود');
+        return;
+    }
+    
+    // Load drivers
+    const drivers = await window.DB.getDrivers();
+    const select = document.getElementById('assignDriverSelect');
+    
+    select.innerHTML = '<option value="">-- اختر سائق --</option>' + 
+        drivers.filter(d => d.status === 'active').map(driver => 
+            `<option value="${driver.id}">${driver.name}</option>`
+        ).join('');
+    
+    // Fill form with existing data
+    document.getElementById('assignOrderId').value = orderId;
+    if (order.driver_id || order.driverId) {
+        select.value = order.driver_id || order.driverId;
+    }
+    document.getElementById('assignCashAmount').value = order.cash_amount || order.cashAmount || 0;
+    document.getElementById('assignDeliveryNotes').value = order.delivery_notes || order.deliveryNotes || '';
+    
+    // Show modal
+    const modal = document.getElementById('assignDriverModal');
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAssignDriverModal() {
+    currentAssignOrderId = null;
+    const modal = document.getElementById('assignDriverModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Handle form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const assignDriverForm = document.getElementById('assignDriverForm');
+    if (assignDriverForm) {
+        assignDriverForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveDriverAssignment();
+        });
+    }
+});
+
+async function saveDriverAssignment() {
+    const orderId = parseInt(document.getElementById('assignOrderId').value);
+    const driverId = parseInt(document.getElementById('assignDriverSelect').value);
+    const cashAmount = parseFloat(document.getElementById('assignCashAmount').value) || 0;
+    const deliveryNotes = document.getElementById('assignDeliveryNotes').value;
+    
+    if (!driverId) {
+        alert('يرجى اختيار سائق');
+        return;
+    }
+    
+    try {
+        // Get driver name
+        const drivers = await window.DB.getDrivers();
+        const driver = drivers.find(d => d.id === driverId);
+        
+        if (!driver) {
+            alert('السائق غير موجود');
+            return;
+        }
+        
+        // Update order
+        const orders = await getRamadanOrders();
+        const orderIndex = orders.findIndex(o => o.id === orderId);
+        
+        if (orderIndex === -1) {
+            alert('الطلب غير موجود');
+            return;
+        }
+        
+        orders[orderIndex].driver_id = driverId;
+        orders[orderIndex].driverId = driverId;
+        orders[orderIndex].driver_name = driver.name;
+        orders[orderIndex].driverName = driver.name;
+        orders[orderIndex].cash_amount = cashAmount;
+        orders[orderIndex].cashAmount = cashAmount;
+        orders[orderIndex].delivery_notes = deliveryNotes;
+        orders[orderIndex].deliveryNotes = deliveryNotes;
+        orders[orderIndex].delivery_status = 'assigned';
+        orders[orderIndex].deliveryStatus = 'assigned';
+        
+        // Save to database
+        await saveRamadanOrders(orders);
+        
+        // Reload table
+        await loadRamadanOrders();
+        
+        closeAssignDriverModal();
+        alert('✅ تم تعيين السائق بنجاح!');
+        
+    } catch (error) {
+        console.error('Error assigning driver:', error);
+        alert('❌ حدث خطأ في تعيين السائق');
+    }
+}
+
+// Close modal on outside click
+window.addEventListener('click', function(event) {
+    const assignModal = document.getElementById('assignDriverModal');
+    if (event.target === assignModal) {
+        closeAssignDriverModal();
+    }
+});
 

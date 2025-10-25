@@ -605,7 +605,16 @@ async function editMenuItem(itemId) {
     document.getElementById('itemName').value = item.name;
     document.getElementById('itemDescription').value = item.description;
     document.getElementById('itemBasePrice').value = item.basePrice;
-    document.getElementById('itemCategory').value = item.category;
+    
+    // Load categories into dropdown
+    const categories = await getCategories();
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+        categorySelect.innerHTML = categories.map(cat => 
+            `<option value="${cat.value}">${cat.name}</option>`
+        ).join('');
+        categorySelect.value = item.category;
+    }
     
     if (item.image) {
         document.getElementById('chickenPreview').innerHTML = `<img src="${item.image}" alt="Chicken">`;
