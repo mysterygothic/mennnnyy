@@ -472,6 +472,9 @@ function updateCartDisplay() {
     const cartCount = document.getElementById('cartCount');
     const totalPrice = document.getElementById('totalPrice');
     const checkoutBtn = document.querySelector('.checkout-btn');
+    const mobileBar = document.getElementById('mobileCheckoutBar');
+    const mobileTotal = document.getElementById('mobileTotalPrice');
+    const mobileCheckoutBtn = document.getElementById('mobileCheckoutBtn');
     const floatingCartBtn = document.getElementById('floatingCartBtn');
     const floatingCartBadge = document.getElementById('floatingCartBadge');
     const mobileCartCount = document.getElementById('mobileCartCount');
@@ -499,6 +502,7 @@ function updateCartDisplay() {
     if (cart.length === 0) {
         cartItems.innerHTML = '<p class="empty-cart">السلة فارغة</p>';
         checkoutBtn.disabled = true;
+        if (mobileCheckoutBtn) mobileCheckoutBtn.disabled = true;
     } else {
         cartItems.innerHTML = cart.map(item => `
             <div class="cart-item">
@@ -513,11 +517,22 @@ function updateCartDisplay() {
             </div>
         `).join('');
         checkoutBtn.disabled = false;
+        if (mobileCheckoutBtn) mobileCheckoutBtn.disabled = false;
     }
     
     // Update total price
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     totalPrice.textContent = `${total} دينار`;
+    if (mobileTotal) mobileTotal.textContent = `${total} دينار`;
+
+    // Toggle mobile checkout bar on small screens
+    if (mobileBar) {
+        if (window.innerWidth <= 768 && cart.length > 0) {
+            mobileBar.style.display = 'flex';
+        } else {
+            mobileBar.style.display = 'none';
+        }
+    }
 }
 
 // Toggle cart section (Mobile)
@@ -607,6 +622,7 @@ function checkout() {
     const modal = document.getElementById('customerInfoModal');
     const cartSection = document.getElementById('cartSection');
     const floatingCartBtn = document.getElementById('floatingCartBtn');
+    const mobileBar = document.getElementById('mobileCheckoutBar');
     
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
@@ -618,6 +634,9 @@ function checkout() {
     if (floatingCartBtn) {
         floatingCartBtn.style.display = 'none';
     }
+    if (mobileBar) {
+        mobileBar.style.display = 'none';
+    }
     
     console.log('Started Checkout Process');
 }
@@ -626,6 +645,7 @@ function checkout() {
 function closeCustomerModal() {
     const modal = document.getElementById('customerInfoModal');
     const floatingCartBtn = document.getElementById('floatingCartBtn');
+    const mobileBar = document.getElementById('mobileCheckoutBar');
     
     modal.style.display = 'none';
     document.body.style.overflow = 'auto';
@@ -633,6 +653,9 @@ function closeCustomerModal() {
     // Show floating button again if on mobile and cart has items
     if (floatingCartBtn && cart.length > 0 && window.innerWidth <= 768) {
         floatingCartBtn.style.display = 'flex';
+    }
+    if (mobileBar && cart.length > 0 && window.innerWidth <= 768) {
+        mobileBar.style.display = 'flex';
     }
     
     // Reset form
@@ -789,4 +812,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (customerForm) {
         customerForm.addEventListener('submit', submitOrder);
     }
+    // Initial toggle for mobile bar
+    updateCartDisplay();
+    // Handle orientation/viewport changes
+    window.addEventListener('resize', () => {
+        updateCartDisplay();
+    });
 });

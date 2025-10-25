@@ -552,6 +552,56 @@ h1, h2, h3 {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
+/* ===== Mobile Checkout Bar (always visible on mobile) ===== */
+@media (max-width: 768px) {
+  .mobile-checkout-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(26, 15, 8, 0.95);
+    border-top: 1px solid rgba(212, 114, 34, 0.35);
+    backdrop-filter: saturate(120%) blur(6px);
+    z-index: 9999;
+  }
+  .mobile-total {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobile-checkout-btn {
+    background: linear-gradient(135deg, #d47222 0%, #e88230 100%);
+    color: #fff;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-size: 1em;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    min-width: 150px;
+    flex-shrink: 0;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(212, 114, 34, 0.35);
+  }
+  .mobile-checkout-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  /* Provide bottom spacing to avoid content being hidden behind the fixed bar */
+  body {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+}
+
 .confirmation-header {
     padding: 30px 20px 20px;
     border-bottom: 1px solid rgba(212, 114, 34, 0.3);

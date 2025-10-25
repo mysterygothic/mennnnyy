@@ -79,6 +79,15 @@
         </div>
     </div>
 
+    <!-- Mobile Checkout Bar (always visible on mobile) -->
+    <div id="mobileCheckoutBar" class="mobile-checkout-bar" style="display: none;">
+        <div class="mobile-total">
+            <span>المجموع:</span>
+            <span id="mobileTotalPrice">0 دينار</span>
+        </div>
+        <button id="mobileCheckoutBtn" class="mobile-checkout-btn" onclick="checkout()" disabled>إرسال الطلب</button>
+    </div>
+
     <!-- Customer Info Modal -->
     <div id="customerInfoModal" class="modal">
         <div class="modal-content">
