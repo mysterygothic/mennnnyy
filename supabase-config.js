@@ -35,14 +35,14 @@ async function initSupabase() {
     
     try {
         // Check if Supabase JS library is loaded
-        if (typeof supabase === 'undefined') {
+        if (typeof window.supabase === 'undefined') {
             console.error('❌ Supabase JS library not loaded!');
-            console.error('Make sure to include: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>');
+            console.error('Make sure to include: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>');
             return null;
         }
         
         // Create Supabase client
-        const { createClient } = supabase;
+        const { createClient } = window.supabase;
         supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         console.log('✅ Supabase connected successfully!');
