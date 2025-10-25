@@ -623,6 +623,40 @@ async function editMenuItem(itemId) {
         document.getElementById('meatPreview').innerHTML = `<img src="${item.meatOptions[1].image}" alt="Meat">`;
     }
     
+    // Load existing quantity options (CHICKEN)
+    const chickenContainer = document.getElementById('chickenQuantityOptions');
+    if (chickenContainer && item.quantityOptions && item.quantityOptions.length > 0) {
+        chickenContainer.innerHTML = '';
+        item.quantityOptions.forEach(option => {
+            const row = document.createElement('div');
+            row.className = 'quantity-option-row';
+            row.innerHTML = `
+                <input type="text" placeholder="اسم الخيار" class="chicken-qty-label" value="${option.label || ''}">
+                <input type="text" placeholder="القيمة" class="chicken-qty-value" value="${option.value || ''}">
+                <input type="number" placeholder="السعر" step="0.5" class="chicken-qty-price" value="${option.price || 0}">
+                <button type="button" onclick="removeQuantityRow(this)">❌</button>
+            `;
+            chickenContainer.appendChild(row);
+        });
+    }
+    
+    // Load existing quantity options (MEAT)
+    const meatContainer = document.getElementById('meatQuantityOptions');
+    if (meatContainer && item.meatQuantityOptions && item.meatQuantityOptions.length > 0) {
+        meatContainer.innerHTML = '';
+        item.meatQuantityOptions.forEach(option => {
+            const row = document.createElement('div');
+            row.className = 'quantity-option-row';
+            row.innerHTML = `
+                <input type="text" placeholder="اسم الخيار" class="meat-qty-label" value="${option.label || ''}">
+                <input type="text" placeholder="القيمة" class="meat-qty-value" value="${option.value || ''}">
+                <input type="number" placeholder="السعر" step="0.5" class="meat-qty-price" value="${option.price || 0}">
+                <button type="button" onclick="removeQuantityRow(this)">❌</button>
+            `;
+            meatContainer.appendChild(row);
+        });
+    }
+    
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
