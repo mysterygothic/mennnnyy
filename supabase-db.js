@@ -512,6 +512,122 @@ function getDatabaseStatus() {
     }
 }
 
+// ========== DRIVERS OPERATIONS ==========
+
+/**
+ * Get all drivers
+ * @returns {Promise<Array>} Array of drivers
+ */
+async function getDrivers() {
+    if (useLocalStorageFallback || !supabase) {
+        const data = localStorage.getItem('drivers');
+        return data ? JSON.parse(data) : [];
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('drivers')
+            .select('*')
+            .order('name', { ascending: true });
+        
+        if (error) throw error;
+        
+        return data || [];
+    } catch (error) {
+        console.error('Error fetching drivers:', error);
+        const data = localStorage.getItem('drivers');
+        return data ? JSON.parse(data) : [];
+    }
+}
+
+/**
+ * Save driver (create or update)
+ * @param {Object} driver - Driver object
+ * @returns {Promise<boolean>} Success status
+ */
+async function saveDriver(driver) {
+    // Always save to localStorage as cache
+    const drivers = await getDrivers();
+    const existingIndex = drivers.findIndex(d => d.id === driver.id);
+    
+    if (existingIndex >= 0) {
+        drivers[existingIndex] = driver;
+    } else {
+        drivers.push(driver);
+    }
+    localStorage.setItem('drivers', JSON.stringify(drivers));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const dbDriver = {
+            name: driver.name,
+            phone_number: driver.phoneNumber || driver.phone_number,
+            vehicle_type: driver.vehicleType || driver.vehicle_type,
+            vehicle_plate: driver.vehiclePlate || driver.vehicle_plate,
+            status: driver.status || 'active',
+            notes: driver.notes,
+            updated_at: new Date().toISOString()
+        };
+        
+        if (driver.id && typeof driver.id === 'number' && driver.id < 1000000000000) {
+            // Update existing
+            const { error } = await supabase
+                .from('drivers')
+                .update(dbDriver)
+                .eq('id', driver.id);
+            
+            if (error) throw error;
+        } else {
+            // Insert new
+            const { error } = await supabase
+                .from('drivers')
+                .insert([dbDriver]);
+            
+            if (error) throw error;
+        }
+        
+        console.log('✅ Driver saved to database');
+        return true;
+    } catch (error) {
+        console.error('Error saving driver:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete driver
+ * @param {number} driverId - Driver ID to delete
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteDriver(driverId) {
+    // Always delete from localStorage cache
+    const drivers = await getDrivers();
+    const filtered = drivers.filter(driver => driver.id !== driverId);
+    localStorage.setItem('drivers', JSON.stringify(filtered));
+    
+    if (useLocalStorageFallback || !supabase) {
+        return true;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('drivers')
+            .delete()
+            .eq('id', driverId);
+        
+        if (error) throw error;
+        
+        console.log('✅ Driver deleted from database');
+        return true;
+    } catch (error) {
+        console.error('Error deleting driver:', error);
+        return false;
+    }
+}
+
 // Export functions for global use
 if (typeof window !== 'undefined') {
     window.DB = {
@@ -530,6 +646,11 @@ if (typeof window !== 'undefined') {
         saveRamadanOrder,
         saveRamadanOrders,
         deleteRamadanOrder,
+        
+        // Drivers
+        getDrivers,
+        saveDriver,
+        deleteDriver,
         
         // Utilities
         isUsingSupabase,
