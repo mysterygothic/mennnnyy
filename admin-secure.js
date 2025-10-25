@@ -809,6 +809,8 @@ async function saveMenuItem() {
     const chickenImage = chickenPreview ? chickenPreview.src : 'picturesfood/default.jpg';
     const meatImage = meatPreview ? meatPreview.src : chickenImage;
     
+    // If editing an existing item, preserve existing quantity options when no rows are provided
+    const existingItem = itemId ? menuData.find(i => i.id === parseInt(itemId)) : null;
     const newItem = {
         name: document.getElementById('itemName').value,
         description: document.getElementById('itemDescription').value,
@@ -820,8 +822,12 @@ async function saveMenuItem() {
             { type: "دجاج", image: chickenImage, priceMultiplier: 1 },
             { type: "لحم", image: meatImage, priceMultiplier: 1.5 }
         ],
-        quantityOptions: chickenQuantityOptions,
-        meatQuantityOptions: meatQuantityOptions
+        quantityOptions: (chickenQuantityOptions && chickenQuantityOptions.length > 0)
+            ? chickenQuantityOptions
+            : (existingItem && Array.isArray(existingItem.quantityOptions) ? existingItem.quantityOptions : []),
+        meatQuantityOptions: (meatQuantityOptions && meatQuantityOptions.length > 0)
+            ? meatQuantityOptions
+            : (existingItem && Array.isArray(existingItem.meatQuantityOptions) ? existingItem.meatQuantityOptions : [])
     };
     
     if (itemId) {
