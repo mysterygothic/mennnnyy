@@ -1,0 +1,11 @@
+    
+    <!-- SECURITY: Immediate redirect if not authenticated -->
+    <script>
+        (function(){
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                window.location.replace('admin.html');
+            }
+        })();
+    </script>
+    <meta http-equiv="refresh" content="0; url=admin.html" id="securityMeta">

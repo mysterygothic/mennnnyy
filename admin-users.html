@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة المستخدمين - مطعم ومطبخ الشيخ</title>
+    
+    <!-- SECURITY: Immediate redirect if not authenticated -->
+    <script>
+        (function(){
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                window.location.replace('admin.html');
+            } else {
+                setTimeout(function(){ 
+                    const meta = document.getElementById('securityMeta');
+                    if (meta) meta.remove();
+                    if (document.body) document.body.style.display = '';
+                }, 10);
+            }
+        })();
+    </script>
+    <meta http-equiv="refresh" content="0; url=admin.html" id="securityMeta">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,7 +28,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="admin.css">
 </head>
-<body class="admin-body">
+<body class="admin-body" style="display: none;">
     <div class="admin-container">
         <aside class="admin-sidebar">
             <div class="admin-sidebar-header">
