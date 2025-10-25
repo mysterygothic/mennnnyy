@@ -9,15 +9,25 @@ let allOrders = []; // For search functionality
 // Telegram Configuration (using Cloudflare Worker)
 const TELEGRAM_WORKER_URL = 'https://mataamshiekh-ramadan.zlmsn3mk.workers.dev'; // Your worker URL
 
-// Get Ramadan orders from localStorage
-function getRamadanOrders() {
+// Get Ramadan orders from database (with localStorage fallback)
+async function getRamadanOrders() {
+    if (window.DB && window.DB.getRamadanOrders) {
+        return await window.DB.getRamadanOrders();
+    }
+    // Fallback to localStorage
     const data = localStorage.getItem(STORAGE_KEYS.RAMADAN_ORDERS);
     return data ? JSON.parse(data) : [];
 }
 
-// Save Ramadan orders to localStorage
-function saveRamadanOrders(orders) {
+// Save Ramadan orders to database (with localStorage cache)
+async function saveRamadanOrders(orders) {
+    // Save to localStorage as cache
     localStorage.setItem(STORAGE_KEYS.RAMADAN_ORDERS, JSON.stringify(orders));
+    
+    // Save to database if available
+    if (window.DB && window.DB.saveRamadanOrders) {
+        await window.DB.saveRamadanOrders(orders);
+    }
 }
 
 function normalizePhone(phone) {
@@ -34,17 +44,17 @@ function normalizePhone(phone) {
 }
 
 // Initialize Ramadan page
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     if (document.getElementById('ramadanOrdersTable')) {
-        loadRamadanOrders();
-        updateRamadanStats();
+        await loadRamadanOrders();
+        await updateRamadanStats();
     }
 });
 
 // Load Ramadan orders table
-function loadRamadanOrders(ordersToDisplay = null) {
-    const orders = ordersToDisplay || getRamadanOrders();
-    allOrders = getRamadanOrders(); // Store all orders for search
+async function loadRamadanOrders(ordersToDisplay = null) {
+    const orders = ordersToDisplay || await getRamadanOrders();
+    allOrders = await getRamadanOrders(); // Store all orders for search
     const tbody = document.getElementById('ramadanOrdersBody');
     
     const phoneCounts = {};
@@ -108,8 +118,8 @@ function formatDate(dateString) {
 }
 
 // Update Ramadan statistics
-function updateRamadanStats() {
-    const orders = getRamadanOrders();
+async function updateRamadanStats() {
+    const orders = await getRamadanOrders();
     
     // Total orders
     document.getElementById('totalOrders').textContent = orders.length;
@@ -132,13 +142,13 @@ function updateRamadanStats() {
 }
 
 // Show Ramadan order form
-function showRamadanOrderForm() {
+async function showRamadanOrderForm() {
     const formSection = document.getElementById('ramadanOrderFormSection');
     formSection.style.display = 'block';
     formSection.scrollIntoView({ behavior: 'smooth' });
     
     // Load menu items for ordering
-    loadRamadanFoodItems();
+    await loadRamadanFoodItems();
 }
 
 // Hide Ramadan order form
@@ -155,9 +165,9 @@ function hideRamadanOrderForm() {
 }
 
 // Load food items for Ramadan ordering
-function loadRamadanFoodItems() {
-    const menuData = getMenuData();
-    const categories = getCategories();
+async function loadRamadanFoodItems() {
+    const menuData = await getMenuData();
+    const categories = await getCategories();
     const grid = document.getElementById('ramadanFoodItems');
     const categoryButtons = document.getElementById('ramadanCategoryButtons');
     
@@ -214,7 +224,7 @@ function loadRamadanFoodItems() {
 }
 
 // Filter Ramadan category
-function filterRamadanCategory(category) {
+async function filterRamadanCategory(category) {
     currentRamadanFilter = category;
     
     document.querySelectorAll('#ramadanCategoryButtons .category-btn').forEach(btn => {
@@ -222,12 +232,12 @@ function filterRamadanCategory(category) {
     });
     event.target.classList.add('active');
     
-    loadRamadanFoodItems();
+    await loadRamadanFoodItems();
 }
 
 // Select meat type for Ramadan order
-function selectRamadanMeatType(itemId, meatType) {
-    const menuData = getMenuData();
+async function selectRamadanMeatType(itemId, meatType) {
+    const menuData = await getMenuData();
     const item = menuData.find(item => item.id === itemId);
     const meatButtons = document.querySelectorAll(`#ramadanFoodItems [data-id="${itemId}"] .meat-btn`);
     const quantitySelect = document.getElementById(`ramadan-quantity-${itemId}`);
@@ -269,12 +279,12 @@ function selectRamadanMeatType(itemId, meatType) {
 }
 
 // Update item quantity for Ramadan order
-function updateRamadanItemQuantity(itemId) {
+async function updateRamadanItemQuantity(itemId) {
     const select = document.getElementById(`ramadan-quantity-${itemId}`);
     const selectedOption = select.options[select.selectedIndex];
     
     if (selectedOption.value) {
-        const menuData = getMenuData();
+        const menuData = await getMenuData();
         const item = menuData.find(item => item.id === itemId);
         const selectedQuantity = selectedOption.value;
         const selectedPrice = parseFloat(selectedOption.dataset.price);
@@ -446,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Submit Ramadan order
-function submitRamadanOrder() {
+async function submitRamadanOrder() {
     if (ramadanCart.length === 0) {
         alert('السلة فارغة! يرجى إضافة عناصر للطلب');
         return;
@@ -470,7 +480,7 @@ function submitRamadanOrder() {
     formattedPhone = '+962' + formattedPhone;
     
     // Get existing orders
-    const orders = getRamadanOrders();
+    const orders = await getRamadanOrders();
     
     if (orders.some(o => normalizePhone(o.phoneNumber) === normalizePhone(formattedPhone))) {
         alert('⚠️ تحذير: رقم التلفون هذا موجود مسبقًا ضمن الطلبات. سيتم تمييز الطلبات المكررة باللون الأحمر في الجدول.');
@@ -504,7 +514,7 @@ function submitRamadanOrder() {
     
     // Save order
     orders.push(newOrder);
-    saveRamadanOrders(orders);
+    await saveRamadanOrders(orders);
     
     // Clear cart and form
     ramadanCart = [];
@@ -513,15 +523,15 @@ function submitRamadanOrder() {
     hideRamadanOrderForm();
     
     // Refresh orders table and stats
-    loadRamadanOrders();
-    updateRamadanStats();
+    await loadRamadanOrders();
+    await updateRamadanStats();
     
     alert(`تم حفظ الطلب بنجاح!\nرقم الطلب: ${serialNumber}`);
 }
 
 // View order details
-function viewOrder(orderId) {
-    const orders = getRamadanOrders();
+async function viewOrder(orderId) {
+    const orders = await getRamadanOrders();
     const order = orders.find(o => o.id === orderId);
     
     if (!order) {
@@ -575,23 +585,29 @@ function closeDeleteOrderModal() {
 }
 
 // Confirm delete order
-function confirmDeleteOrder() {
+async function confirmDeleteOrder() {
     if (!deleteOrderId) return;
     
-    let orders = getRamadanOrders();
-    orders = orders.filter(order => order.id !== deleteOrderId);
-    saveRamadanOrders(orders);
+    // Delete from database
+    if (window.DB && window.DB.deleteRamadanOrder) {
+        await window.DB.deleteRamadanOrder(deleteOrderId);
+    } else {
+        // Fallback: delete from localStorage
+        let orders = await getRamadanOrders();
+        orders = orders.filter(order => order.id !== deleteOrderId);
+        await saveRamadanOrders(orders);
+    }
     
     closeDeleteOrderModal();
-    loadRamadanOrders();
-    updateRamadanStats();
+    await loadRamadanOrders();
+    await updateRamadanStats();
     
     alert('تم حذف الطلب بنجاح');
 }
 
 // Export to Excel
-function exportRamadanOrders() {
-    const orders = getRamadanOrders();
+async function exportRamadanOrders() {
+    const orders = await getRamadanOrders();
     
     if (orders.length === 0) {
         alert('لا توجد طلبات لتصديرها');
@@ -744,8 +760,8 @@ function clearSearch() {
 // ==================== EDIT ORDER FUNCTIONALITY ====================
 
 // Open edit order modal
-function openEditOrderModal(orderId) {
-    const orders = getRamadanOrders();
+async function openEditOrderModal(orderId) {
+    const orders = await getRamadanOrders();
     const order = orders.find(o => o.id === orderId);
     
     if (!order) {
@@ -798,10 +814,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Save edited order
-function saveOrderEdit() {
+async function saveOrderEdit() {
     if (!editOrderId) return;
     
-    let orders = getRamadanOrders();
+    let orders = await getRamadanOrders();
     const orderIndex = orders.findIndex(o => o.id === editOrderId);
     
     if (orderIndex === -1) {
@@ -861,14 +877,14 @@ function saveOrderEdit() {
     };
     
     // Save
-    saveRamadanOrders(orders);
+    await saveRamadanOrders(orders);
     
     // Close modal
     closeEditOrderModal();
     
     // Refresh display
-    loadRamadanOrders();
-    updateRamadanStats();
+    await loadRamadanOrders();
+    await updateRamadanStats();
     
     alert('✅ تم تحديث الطلب بنجاح!');
 }
@@ -966,7 +982,7 @@ function toggleEditDeliveryAddress() {
 }
 
 // Submit quick entry
-function submitQuickEntry() {
+async function submitQuickEntry() {
     const customerName = document.getElementById('quickCustomerName').value;
     const phoneNumber = document.getElementById('quickPhoneNumber').value;
     const order = document.getElementById('quickOrder').value;
@@ -997,7 +1013,7 @@ function submitQuickEntry() {
     }
     
     // Get existing orders
-    const orders = getRamadanOrders();
+    const orders = await getRamadanOrders();
     
     // Warn if duplicate phone exists
     if (orders.some(o => normalizePhone(o.phoneNumber) === normalizePhone(formattedPhone))) {
@@ -1030,15 +1046,15 @@ function submitQuickEntry() {
     
     // Save order
     orders.push(newOrder);
-    saveRamadanOrders(orders);
+    await saveRamadanOrders(orders);
     
     // Update session count
     quickEntrySessionCount++;
     updateQuickEntryCount();
     
     // Refresh table and stats
-    loadRamadanOrders();
-    updateRamadanStats();
+    await loadRamadanOrders();
+    await updateRamadanStats();
     
     // Clear form (except delivery type)
     document.getElementById('quickCustomerName').value = '';
@@ -1067,7 +1083,7 @@ function submitQuickEntry() {
 
 // Upload orders to Telegram
 async function syncToTelegram() {
-    const orders = getRamadanOrders();
+    const orders = await getRamadanOrders();
     
     if (orders.length === 0) {
         alert('لا توجد طلبات للرفع');
@@ -1225,7 +1241,7 @@ async function syncFromTelegram(replaceAll = false) {
             return;
         }
         
-        const currentOrders = getRamadanOrders();
+        const currentOrders = await getRamadanOrders();
         let maxSerialNumber = currentOrders.length > 0 ? Math.max(...currentOrders.map(o => o.serialNumber)) : 0;
         
         let finalOrders;
@@ -1331,11 +1347,11 @@ async function syncFromTelegram(replaceAll = false) {
         }
         
         // Save
-        saveRamadanOrders(finalOrders);
+        await saveRamadanOrders(finalOrders);
         
         // Refresh display
-        loadRamadanOrders();
-        updateRamadanStats();
+        await loadRamadanOrders();
+        await updateRamadanStats();
         
         alert(message);
         

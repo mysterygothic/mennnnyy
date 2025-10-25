@@ -1,9 +1,19 @@
-// Food Menu Data - Load from localStorage (managed by admin)
-function getFoodItems() {
+// Food Menu Data - Load from Supabase or localStorage fallback
+async function getFoodItems() {
+    // Try to load from Supabase if available
+    if (window.DB && window.DB.getMenuItems) {
+        const items = await window.DB.getMenuItems();
+        if (items && items.length > 0) {
+            return items;
+        }
+    }
+    
+    // Fallback to localStorage
     const data = localStorage.getItem('menu_data');
     if (data) {
         return JSON.parse(data);
     }
+    
     // Return default data if not available
     return [
         {
@@ -201,30 +211,36 @@ function getFoodItems() {
 }
 
 // Initialize menu data in localStorage if not exists
-function initMenuData() {
-    if (!localStorage.getItem('menu_data')) {
-        const defaultData = getFoodItems();
-        localStorage.setItem('menu_data', JSON.stringify(defaultData));
+async function initMenuData() {
+    const items = await getFoodItems();
+    if (items && items.length > 0) {
+        localStorage.setItem('menu_data', JSON.stringify(items));
     }
 }
-
-// Initialize on load
-initMenuData();
-
-const foodItems = getFoodItems();
 
 // Cart Management
 let cart = [];
 let currentFilter = 'all';
+let foodItems = [];
 
 // Initialize the page
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize database connection
+    if (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.init) {
+        await window.SUPABASE_CONFIG.init();
+    }
+    
+    // Load menu data
+    await initMenuData();
+    foodItems = await getFoodItems();
+    
+    // Render page
     renderFoodItems();
     updateCartDisplay();
 });
 
 // Filter food items by category
-function filterCategory(category) {
+async function filterCategory(category) {
     currentFilter = category;
     
     // Update active category button
@@ -233,13 +249,13 @@ function filterCategory(category) {
     });
     event.target.classList.add('active');
     
-    renderFoodItems();
+    await renderFoodItems();
 }
 
 // Render food items
-function renderFoodItems() {
+async function renderFoodItems() {
     const grid = document.getElementById('foodItemsGrid');
-    const foodItems = getFoodItems(); // Get fresh data
+    foodItems = await getFoodItems(); // Get fresh data
     const filteredItems = currentFilter === 'all' 
         ? foodItems 
         : foodItems.filter(item => item.category === currentFilter);
@@ -288,8 +304,8 @@ function renderFoodItems() {
 }
 
 // Select meat type
-function selectMeatType(itemId, meatType) {
-    const foodItems = getFoodItems();
+async function selectMeatType(itemId, meatType) {
+    foodItems = await getFoodItems();
     const item = foodItems.find(item => item.id === itemId);
     const meatButtons = document.querySelectorAll(`[data-id="${itemId}"] .meat-btn`);
     const quantitySelect = document.getElementById(`quantity-${itemId}`);
@@ -338,12 +354,12 @@ function selectMeatType(itemId, meatType) {
 }
 
 // Update item quantity selection
-function updateItemQuantity(itemId) {
+async function updateItemQuantity(itemId) {
     const select = document.getElementById(`quantity-${itemId}`);
     const selectedOption = select.options[select.selectedIndex];
     
     if (selectedOption.value) {
-        const foodItems = getFoodItems();
+        foodItems = await getFoodItems();
         const item = foodItems.find(item => item.id === itemId);
         const selectedQuantity = selectedOption.value;
         const selectedPrice = parseFloat(selectedOption.dataset.price);

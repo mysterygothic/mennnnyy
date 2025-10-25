@@ -399,22 +399,48 @@ function initializeDefaultData() {
 initializeDefaultData();
 
 // ========== MENU DATA FUNCTIONS ==========
-function getMenuData() {
+// Updated to use Supabase DB (with localStorage fallback)
+
+async function getMenuData() {
+    if (window.DB && window.DB.getMenuItems) {
+        return await window.DB.getMenuItems();
+    }
+    // Fallback to localStorage
     const data = localStorage.getItem(STORAGE_KEYS.MENU_DATA);
     return data ? JSON.parse(data) : [];
 }
 
-function saveMenuData(data) {
+async function saveMenuData(data) {
+    // Save to localStorage as cache
     localStorage.setItem(STORAGE_KEYS.MENU_DATA, JSON.stringify(data));
+    
+    // Save to Supabase if available
+    if (window.DB && window.DB.saveMenuItem) {
+        for (const item of data) {
+            await window.DB.saveMenuItem(item);
+        }
+    }
 }
 
-function getCategories() {
+async function getCategories() {
+    if (window.DB && window.DB.getCategories) {
+        return await window.DB.getCategories();
+    }
+    // Fallback to localStorage
     const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
     return data ? JSON.parse(data) : [];
 }
 
-function saveCategories(data) {
+async function saveCategories(data) {
+    // Save to localStorage as cache
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(data));
+    
+    // Save to Supabase if available
+    if (window.DB && window.DB.saveCategory) {
+        for (const category of data) {
+            await window.DB.saveCategory(category);
+        }
+    }
 }
 
 // ========== ADMIN SECTION NAVIGATION ==========
@@ -459,9 +485,9 @@ function filterMenuItems(category) {
 }
 
 // ========== LOAD MENU ITEMS ==========
-function loadMenuItems() {
-    const menuData = getMenuData();
-    const categories = getCategories();
+async function loadMenuItems() {
+    const menuData = await getMenuData();
+    const categories = await getCategories();
     const grid = document.getElementById('adminMenuItems');
     const categoryFilterButtons = document.getElementById('categoryFilterButtons');
     
@@ -506,8 +532,8 @@ function loadMenuItems() {
 }
 
 // ========== LOAD CATEGORIES ==========
-function loadCategories() {
-    const categories = getCategories();
+async function loadCategories() {
+    const categories = await getCategories();
     const list = document.getElementById('categoriesList');
     
     if (!list) return;
@@ -532,7 +558,7 @@ function loadCategories() {
 }
 
 // ========== MODAL FUNCTIONS ==========
-function openAddItemModal() {
+async function openAddItemModal() {
     const modal = document.getElementById('itemModal');
     const form = document.getElementById('itemForm');
     const modalTitle = document.getElementById('itemModalTitle');
@@ -545,7 +571,7 @@ function openAddItemModal() {
     document.getElementById('chickenPreview').innerHTML = '';
     document.getElementById('meatPreview').innerHTML = '';
     
-    const categories = getCategories();
+    const categories = await getCategories();
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
         categorySelect.innerHTML = categories.map(cat => 
@@ -565,8 +591,8 @@ function closeItemModal() {
     }
 }
 
-function editMenuItem(itemId) {
-    const menuData = getMenuData();
+async function editMenuItem(itemId) {
+    const menuData = await getMenuData();
     const item = menuData.find(i => i.id === itemId);
     
     if (!item) return;
@@ -592,13 +618,20 @@ function editMenuItem(itemId) {
     document.body.style.overflow = 'hidden';
 }
 
-function deleteMenuItem(itemId) {
+async function deleteMenuItem(itemId) {
     if (!confirm('هل أنت متأكد من حذف هذا الصنف؟')) return;
     
-    let menuData = getMenuData();
-    menuData = menuData.filter(item => item.id !== itemId);
-    saveMenuData(menuData);
-    loadMenuItems();
+    // Delete from database
+    if (window.DB && window.DB.deleteMenuItem) {
+        await window.DB.deleteMenuItem(itemId);
+    } else {
+        // Fallback: delete from localStorage
+        let menuData = await getMenuData();
+        menuData = menuData.filter(item => item.id !== itemId);
+        await saveMenuData(menuData);
+    }
+    
+    await loadMenuItems();
     
     alert('تم حذف الصنف بنجاح');
 }
@@ -626,8 +659,8 @@ function closeCategoryModal() {
     }
 }
 
-function editCategory(categoryId) {
-    const categories = getCategories();
+async function editCategory(categoryId) {
+    const categories = await getCategories();
     const category = categories.find(cat => cat.id === categoryId);
     
     if (!category) return;
@@ -644,13 +677,20 @@ function editCategory(categoryId) {
     document.body.style.overflow = 'hidden';
 }
 
-function deleteCategory(categoryId) {
+async function deleteCategory(categoryId) {
     if (!confirm('هل أنت متأكد من حذف هذه الفئة؟')) return;
     
-    let categories = getCategories();
-    categories = categories.filter(cat => cat.id !== categoryId);
-    saveCategories(categories);
-    loadCategories();
+    // Delete from database
+    if (window.DB && window.DB.deleteCategory) {
+        await window.DB.deleteCategory(categoryId);
+    } else {
+        // Fallback: delete from localStorage
+        let categories = await getCategories();
+        categories = categories.filter(cat => cat.id !== categoryId);
+        await saveCategories(categories);
+    }
+    
+    await loadCategories();
     
     alert('تم حذف الفئة بنجاح');
 }
@@ -702,9 +742,9 @@ function removeQuantityRow(button) {
     button.parentElement.remove();
 }
 
-function saveMenuItem() {
+async function saveMenuItem() {
     const itemId = document.getElementById('itemId').value;
-    const menuData = getMenuData();
+    const menuData = await getMenuData();
     
     const chickenRows = document.querySelectorAll('#chickenQuantityOptions .quantity-option-row');
     const chickenQuantityOptions = Array.from(chickenRows).map(row => ({
@@ -742,26 +782,29 @@ function saveMenuItem() {
     };
     
     if (itemId) {
-        const index = menuData.findIndex(item => item.id === parseInt(itemId));
-        if (index !== -1) {
-            menuData[index] = { ...menuData[index], ...newItem };
+        newItem.id = parseInt(itemId);
+        // Update existing item in database
+        if (window.DB && window.DB.saveMenuItem) {
+            await window.DB.saveMenuItem(newItem);
         }
     } else {
         const newId = menuData.length > 0 ? Math.max(...menuData.map(item => item.id)) + 1 : 1;
         newItem.id = newId;
-        menuData.push(newItem);
+        // Insert new item to database
+        if (window.DB && window.DB.saveMenuItem) {
+            await window.DB.saveMenuItem(newItem);
+        }
     }
     
-    saveMenuData(menuData);
     closeItemModal();
-    loadMenuItems();
+    await loadMenuItems();
     
     alert(itemId ? 'تم تحديث الصنف بنجاح' : 'تم إضافة الصنف بنجاح');
 }
 
-function saveCategory() {
+async function saveCategory() {
     const categoryId = document.getElementById('categoryId').value;
-    const categories = getCategories();
+    const categories = await getCategories();
     
     const newCategory = {
         name: document.getElementById('categoryName').value,
@@ -769,19 +812,22 @@ function saveCategory() {
     };
     
     if (categoryId) {
-        const index = categories.findIndex(cat => cat.id === parseInt(categoryId));
-        if (index !== -1) {
-            categories[index] = { ...categories[index], ...newCategory };
+        newCategory.id = parseInt(categoryId);
+        // Update existing category in database
+        if (window.DB && window.DB.saveCategory) {
+            await window.DB.saveCategory(newCategory);
         }
     } else {
         const newId = categories.length > 0 ? Math.max(...categories.map(cat => cat.id)) + 1 : 1;
         newCategory.id = newId;
-        categories.push(newCategory);
+        // Insert new category to database
+        if (window.DB && window.DB.saveCategory) {
+            await window.DB.saveCategory(newCategory);
+        }
     }
     
-    saveCategories(categories);
     closeCategoryModal();
-    loadCategories();
+    await loadCategories();
     
     alert(categoryId ? 'تم تحديث الفئة بنجاح' : 'تم إضافة الفئة بنجاح');
 }
@@ -819,8 +865,8 @@ window.onclick = function(event) {
 };
 
 // ========== EXPORT MENU FILE ==========
-function exportMenuFile() {
-    const menuData = getMenuData();
+async function exportMenuFile() {
+    const menuData = await getMenuData();
     
     if (menuData.length === 0) {
         alert('لا توجد بيانات لتصديرها');
