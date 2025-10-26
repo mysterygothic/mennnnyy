@@ -106,31 +106,69 @@ async function handleLogin() {
     submitBtn.disabled = true;
     
     try {
-        // Call auth worker
-        const response = await fetch(`${AUTH_WORKER_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                username: username, 
-                password: password 
-            })
-        });
+        // Try Cloudflare Worker first
+        let loginSuccess = false;
+        let userInfo = null;
+        let authToken = null;
         
-        const result = await response.json();
+        try {
+            const response = await fetch(`${AUTH_WORKER_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    username: username, 
+                    password: password 
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success && result.token) {
+                loginSuccess = true;
+                authToken = result.token;
+                userInfo = {
+                    username: result.username,
+                    role: result.role,
+                    source: 'cloudflare'
+                };
+                console.log('✅ تسجيل دخول عبر Cloudflare Worker');
+            }
+        } catch (workerError) {
+            console.log('⚠️ Cloudflare Worker غير متاح، محاولة Supabase...');
+        }
         
-        if (result.success && result.token) {
+        // If Cloudflare Worker failed, try Supabase admin_users
+        if (!loginSuccess && window.DB && window.DB.verifyAdminLogin) {
+            try {
+                const dbUser = await window.DB.verifyAdminLogin(username, password);
+                
+                if (dbUser) {
+                    loginSuccess = true;
+                    // Generate a simple token for Supabase users
+                    authToken = 'supabase_' + btoa(username + ':' + Date.now());
+                    userInfo = {
+                        username: dbUser.username,
+                        role: dbUser.role || 'admin',
+                        fullName: dbUser.full_name || dbUser.fullName,
+                        source: 'supabase'
+                    };
+                    console.log('✅ تسجيل دخول عبر Supabase admin_users');
+                }
+            } catch (dbError) {
+                console.error('خطأ في Supabase:', dbError);
+            }
+        }
+        
+        if (loginSuccess && authToken && userInfo) {
             // Save token and user info
-            localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, result.token);
-            localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify({
-                username: result.username,
-                role: result.role
-            }));
+            localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, authToken);
+            localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(userInfo));
             
             // Redirect to dashboard
             window.location.href = 'admin-dashboard.html';
         } else {
             // Show error
-            errorMessage.textContent = result.error || 'خطأ في تسجيل الدخول';
+            errorMessage.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
             errorMessage.classList.add('show');
             
             btnText.style.display = 'inline';
@@ -184,6 +222,67 @@ function getCurrentAdmin() {
         }
     }
     return null;
+}
+
+// ========== SYNC USER WITH CLOUDFLARE WORKER ==========
+/**
+ * Add or update user in Cloudflare Worker
+ * @param {Object} userData - User data {username, password, role}
+ * @returns {Promise<boolean>} Success status
+ */
+async function syncUserToWorker(userData) {
+    try {
+        const response = await fetch(`${AUTH_WORKER_URL}/admin/add-user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: userData.username,
+                password: userData.password,
+                role: userData.role || 'admin'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ تمت مزامنة المستخدم مع Cloudflare Worker');
+            return true;
+        } else {
+            console.warn('⚠️ فشلت مزامنة المستخدم مع Worker:', result.error);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ خطأ في مزامنة المستخدم مع Worker:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete user from Cloudflare Worker
+ * @param {string} username - Username to delete
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteUserFromWorker(username) {
+    try {
+        const response = await fetch(`${AUTH_WORKER_URL}/admin/delete-user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ تم حذف المستخدم من Cloudflare Worker');
+            return true;
+        } else {
+            console.warn('⚠️ فشل حذف المستخدم من Worker:', result.error);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ خطأ في حذف المستخدم من Worker:', error);
+        return false;
+    }
 }
 
 // ========== INITIALIZE DEFAULT DATA ==========

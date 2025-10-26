@@ -142,7 +142,23 @@ async function saveUser() {
     }
     
     try {
+        // Save to Supabase
         await window.DB.saveAdminUser(userData);
+        
+        // Sync to Cloudflare Worker
+        if (typeof syncUserToWorker === 'function') {
+            const workerSynced = await syncUserToWorker({
+                username: username,
+                password: password,
+                role: role
+            });
+            
+            if (workerSynced) {
+                console.log('✅ تمت مزامنة المستخدم مع Cloudflare Worker');
+            } else {
+                console.warn('⚠️ تم حفظ المستخدم في Supabase فقط (Worker غير متاح)');
+            }
+        }
         
         closeUserModal();
         await loadUsers();
@@ -173,7 +189,23 @@ async function confirmDeleteUser() {
     if (!deleteUserId) return;
     
     try {
+        // Get user info before deleting
+        const user = users.find(u => u.id === deleteUserId);
+        const username = user ? user.username : null;
+        
+        // Delete from Supabase
         await window.DB.deleteAdminUser(deleteUserId);
+        
+        // Delete from Cloudflare Worker
+        if (username && typeof deleteUserFromWorker === 'function') {
+            const workerDeleted = await deleteUserFromWorker(username);
+            
+            if (workerDeleted) {
+                console.log('✅ تم حذف المستخدم من Cloudflare Worker');
+            } else {
+                console.warn('⚠️ تم حذف المستخدم من Supabase فقط (Worker غير متاح)');
+            }
+        }
         
         closeDeleteUserModal();
         await loadUsers();
