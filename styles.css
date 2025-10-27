@@ -161,11 +161,12 @@ header {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 120px;
-    height: 120px;
+    width: 180px !important;
+    height: 180px !important;
     object-fit: contain;
     opacity: 0.95;
     transition: all 0.3s ease;
+    z-index: 10;
 }
 
 .header-logo:hover {
@@ -174,11 +175,11 @@ header {
 }
 
 .header-logo-left {
-    left: 30px;
+    left: 20px;
 }
 
 .header-logo-right {
-    right: 30px;
+    right: 20px;
     transform: translateY(-50%) scaleX(-1);
 }
 
@@ -188,38 +189,38 @@ header {
 
 @media (max-width: 1024px) {
     .header-logo {
-        width: 90px;
-        height: 90px;
+        width: 140px !important;
+        height: 140px !important;
     }
     
     .header-logo-left {
-        left: 15px;
+        left: 10px;
     }
     
     .header-logo-right {
-        right: 15px;
+        right: 10px;
     }
 }
 
 @media (max-width: 768px) {
     header {
-        padding: 50px 20px 40px;
+        padding: 60px 20px 40px;
     }
     
     .header-logo {
-        width: 70px;
-        height: 70px;
+        width: 100px !important;
+        height: 100px !important;
     }
     
     .header-logo-left {
         left: 5px;
-        top: 20px;
+        top: 15px;
         transform: translateY(0);
     }
     
     .header-logo-right {
         right: 5px;
-        top: 20px;
+        top: 15px;
         transform: translateY(0) scaleX(-1);
     }
     
@@ -233,6 +234,28 @@ header {
     
     h1 {
         font-size: 2em;
+        margin-top: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-logo {
+        width: 85px !important;
+        height: 85px !important;
+    }
+    
+    .header-logo-left {
+        left: 3px;
+        top: 10px;
+    }
+    
+    .header-logo-right {
+        right: 3px;
+        top: 10px;
+    }
+    
+    h1 {
+        font-size: 1.6em;
         margin-top: 10px;
     }
 }
