@@ -245,4 +245,63 @@ window.addEventListener('load', async () => {
     if (orderForm) {
         orderForm.addEventListener('submit', submitOrder);
     }
+    
+    // Initialize page transitions
+    initPageTransitions();
+});
+
+// Page Transition System
+function initPageTransitions() {
+    // Create transition overlay if it doesn't exist
+    if (!document.querySelector('.page-transition')) {
+        const overlay = document.createElement('div');
+        overlay.className = 'page-transition';
+        overlay.innerHTML = '<div class="page-transition-spinner"></div>';
+        document.body.appendChild(overlay);
+    }
+    
+    // Intercept all internal link clicks
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        
+        // Check if it's an internal navigation link
+        if (link && 
+            link.href && 
+            !link.href.startsWith('tel:') && 
+            !link.href.startsWith('mailto:') && 
+            !link.href.startsWith('http://wa.me') &&
+            !link.href.startsWith('https://wa.me') &&
+            !link.href.includes('instagram.com') &&
+            !link.href.includes('facebook.com') &&
+            !link.href.includes('google.com') &&
+            !link.target &&
+            link.hostname === window.location.hostname) {
+            
+            e.preventDefault();
+            const url = link.href;
+            navigateWithTransition(url);
+        }
+    });
+}
+
+function navigateWithTransition(url) {
+    const overlay = document.querySelector('.page-transition');
+    
+    // Show transition overlay
+    overlay.classList.add('active');
+    
+    // Navigate after a short delay
+    setTimeout(() => {
+        window.location.href = url;
+    }, 300);
+}
+
+// Hide transition overlay on page load
+window.addEventListener('load', function() {
+    const overlay = document.querySelector('.page-transition');
+    if (overlay) {
+        setTimeout(() => {
+            overlay.classList.remove('active');
+        }, 100);
+    }
 });
