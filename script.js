@@ -252,15 +252,6 @@ window.addEventListener('load', async () => {
 
 // Page Transition System
 function initPageTransitions() {
-    // Hide overlay on page load
-    const overlay = document.querySelector('.page-transition');
-    if (overlay) {
-        // Wait a bit then hide the overlay
-        setTimeout(() => {
-            overlay.classList.add('hide');
-        }, 200);
-    }
-    
     // Intercept all internal link clicks
     document.addEventListener('click', function(e) {
         const link = e.target.closest('a');
@@ -289,10 +280,10 @@ function navigateWithTransition(url) {
     const overlay = document.querySelector('.page-transition');
     
     // Show transition overlay immediately
-    overlay.classList.remove('hide');
+    overlay.classList.add('show');
     
-    // Navigate after overlay is fully visible
+    // Navigate after overlay is visible
     setTimeout(() => {
         window.location.href = url;
-    }, 400);
+    }, 250);
 }
