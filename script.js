@@ -252,12 +252,13 @@ window.addEventListener('load', async () => {
 
 // Page Transition System
 function initPageTransitions() {
-    // Create transition overlay if it doesn't exist
-    if (!document.querySelector('.page-transition')) {
-        const overlay = document.createElement('div');
-        overlay.className = 'page-transition';
-        overlay.innerHTML = '<div class="page-transition-spinner"></div>';
-        document.body.appendChild(overlay);
+    // Hide overlay on page load
+    const overlay = document.querySelector('.page-transition');
+    if (overlay) {
+        // Wait a bit then hide the overlay
+        setTimeout(() => {
+            overlay.classList.add('hide');
+        }, 200);
     }
     
     // Intercept all internal link clicks
@@ -287,21 +288,11 @@ function initPageTransitions() {
 function navigateWithTransition(url) {
     const overlay = document.querySelector('.page-transition');
     
-    // Show transition overlay
-    overlay.classList.add('active');
+    // Show transition overlay immediately
+    overlay.classList.remove('hide');
     
-    // Navigate after a short delay
+    // Navigate after overlay is fully visible
     setTimeout(() => {
         window.location.href = url;
-    }, 300);
+    }, 400);
 }
-
-// Hide transition overlay on page load
-window.addEventListener('load', function() {
-    const overlay = document.querySelector('.page-transition');
-    if (overlay) {
-        setTimeout(() => {
-            overlay.classList.remove('active');
-        }, 100);
-    }
-});
