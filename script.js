@@ -266,6 +266,8 @@ function initPageTransitions() {
             !link.href.includes('instagram.com') &&
             !link.href.includes('facebook.com') &&
             !link.href.includes('google.com') &&
+            !link.href.endsWith('#') &&  // Exclude hash-only links
+            !link.onclick &&  // Exclude links with onclick handlers
             !link.target &&
             link.hostname === window.location.hostname) {
             
