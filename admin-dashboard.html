@@ -4,22 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم - مطعم ومطبخ الشيخ</title>
-    
-    <!-- SECURITY: Immediate redirect if not authenticated -->
-    <script>
-        (function(){
-            const token = localStorage.getItem('admin_token');
-            if (!token) {
-                // No token - redirect immediately
-                window.location.replace('admin.html');
-            } else {
-                // Has token - show page
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.body.style.display = 'block';
-                });
-            }
-        })();
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">

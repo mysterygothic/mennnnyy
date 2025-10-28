@@ -4,11 +4,6 @@
 (function() {
     'use strict';
     
-    // Immediately hide page content
-    if (document.body) {
-        document.body.style.display = 'none';
-    }
-    
     // Check if this is a protected admin page
     function isProtectedPage() {
         const path = window.location.pathname;
@@ -42,7 +37,7 @@
         if (!isProtectedPage()) {
             // Not a protected page, show content
             if (document.body) {
-                document.body.style.display = '';
+                document.body.style.display = 'block';
             }
             return;
         }
@@ -51,7 +46,7 @@
         if (verifyAuth()) {
             // Authenticated, show content
             if (document.body) {
-                document.body.style.display = '';
+                document.body.style.display = 'block';
             }
         } else {
             // Not authenticated, redirect to login
@@ -59,12 +54,12 @@
         }
     }
     
-    // Run immediately
-    init();
-    
-    // Also run when DOM is ready (in case script loaded before body)
+    // Run when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
+    } else {
+        // DOM already loaded
+        init();
     }
 })();
 
