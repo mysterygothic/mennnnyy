@@ -37,7 +37,7 @@
         if (!isProtectedPage()) {
             // Not a protected page, show content
             if (document.body) {
-                document.body.style.display = 'block';
+                document.body.style.removeProperty('display');
             }
             return;
         }
@@ -46,7 +46,7 @@
         if (verifyAuth()) {
             // Authenticated, show content
             if (document.body) {
-                document.body.style.display = 'block';
+                document.body.style.removeProperty('display');
             }
         } else {
             // Not authenticated, redirect to login
