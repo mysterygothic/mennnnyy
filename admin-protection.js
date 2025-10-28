@@ -66,25 +66,5 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     }
-    
-    // Prevent right-click on admin pages (optional extra security)
-    if (isProtectedPage()) {
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Prevent F12, Ctrl+Shift+I, Ctrl+U
-        document.addEventListener('keydown', function(e) {
-            if (
-                e.keyCode === 123 || // F12
-                (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
-                (e.ctrlKey && e.keyCode === 85) // Ctrl+U
-            ) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    }
 })();
 
