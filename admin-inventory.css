@@ -209,6 +209,70 @@
     margin-top: 20px;
 }
 
+/* Purchases Grid */
+.purchases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    padding: 20px;
+}
+
+.purchase-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.purchase-item label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.purchase-item input {
+    padding: 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.purchase-item input:focus {
+    outline: none;
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.damage-input {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
+    border: 2px solid #f59e0b;
+    border-radius: 10px;
+    background: #fffbeb;
+    color: #f59e0b;
+    transition: all 0.3s ease;
+}
+
+.damage-input:focus {
+    outline: none;
+    border-color: #d97706;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+}
+
 /* Inventory Grid */
 .inventory-grid {
     display: grid;
@@ -431,6 +495,28 @@
 .dark-mode .large-number-input {
     background: rgba(255, 255, 255, 0.9);
     color: #059669;
+}
+
+.dark-mode .purchase-item label {
+    color: #e2e8f0;
+}
+
+.dark-mode .purchase-item input {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+.dark-mode .total-row {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+.dark-mode .damage-input {
+    background: #2d1b0e;
+    border-color: #f59e0b;
+    color: #fbbf24;
 }
 
 .dark-mode .section-title h3,
