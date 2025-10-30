@@ -967,7 +967,10 @@ if (typeof window !== 'undefined') {
         // Utilities
         isUsingSupabase,
         getDatabaseStatus,
-        initializeDatabase
+        initializeDatabase,
+        
+        // Direct Supabase access
+        get supabase() { return supabase; }
     };
 }
 
