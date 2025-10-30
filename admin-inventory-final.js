@@ -634,7 +634,8 @@ async function exportMonthlyInventory() {
         
         const [year, month] = selectedMonth.split('-');
         const startDate = `${year}-${month}-01`;
-        const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+        const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+        const endDate = `${year}-${month}-${String(daysInMonth).padStart(2, '0')}`;
         
         const { data, error } = await window.DB.supabase
             .from('daily_inventory')
@@ -643,48 +644,126 @@ async function exportMonthlyInventory() {
             .lte('inventory_date', endDate)
             .order('inventory_date', { ascending: true });
         
-        if (error || !data || data.length === 0) {
-            alert('⚠️ لا توجد بيانات لهذا الشهر');
+        if (error) {
+            console.error('Error:', error);
+            alert('❌ حدث خطأ في تحميل البيانات');
             return;
         }
         
         const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('ar-JO', { month: 'long', year: 'numeric' });
         
+        // تنظيم البيانات حسب التاريخ
+        const dataByDate = {};
+        if (data) {
+            data.forEach(record => {
+                const day = new Date(record.inventory_date).getDate();
+                dataByDate[day] = record;
+            });
+        }
+        
+        // جمع جميع الأصناف
+        const allCategories = new Set();
+        purchaseCategories.forEach(cat => allCategories.add(cat.category_name));
+        allCategories.add('الإتلاف');
+        
         let csv = '\uFEFF';
-        csv += `تقرير الجرد الشهري - ${monthName}\n\n`;
+        csv += `الجرد الشهري - ${monthName}\n\n`;
         
-        csv += 'التاريخ,المبيعات,المشتريات,الإتلاف,الصافي النقدي,صافي الربح\n';
+        // رأس الجدول
+        csv += 'الصنف';
+        for (let day = 1; day <= daysInMonth; day++) {
+            csv += `,${day}`;
+        }
+        csv += ',المجموع الشهري\n';
         
-        let totalSales = 0;
-        let totalPurchases = 0;
-        let totalDamage = 0;
-        let totalProfit = 0;
-        
-        data.forEach(record => {
-            const date = new Date(record.inventory_date).toLocaleDateString('ar-JO');
-            csv += `${date},${record.total_sales.toFixed(2)},${record.total_purchases.toFixed(2)},${record.total_damage.toFixed(2)},${record.net_cash.toFixed(2)},${record.net_profit.toFixed(2)}\n`;
+        // صفوف المشتريات
+        const categoryTotals = {};
+        allCategories.forEach(category => {
+            csv += category;
+            let categoryTotal = 0;
             
-            totalSales += parseFloat(record.total_sales);
-            totalPurchases += parseFloat(record.total_purchases);
-            totalDamage += parseFloat(record.total_damage);
-            totalProfit += parseFloat(record.net_profit);
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayData = dataByDate[day];
+                let value = 0;
+                
+                if (dayData) {
+                    if (category === 'الإتلاف') {
+                        value = dayData.total_damage || 0;
+                    } else {
+                        const purchases = dayData.purchase_items || {};
+                        value = purchases[category] || 0;
+                    }
+                }
+                
+                csv += `,${value > 0 ? value.toFixed(2) : '-'}`;
+                categoryTotal += value;
+            }
+            
+            csv += `,${categoryTotal.toFixed(2)}\n`;
+            categoryTotals[category] = categoryTotal;
         });
         
-        csv += '\nالمجاميع الشهرية:\n';
+        csv += '\n';
+        
+        // صف المبيعات اليومية
+        csv += 'المبيعات اليومية';
+        let totalSales = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayData = dataByDate[day];
+            const sales = dayData ? (dayData.total_sales || 0) : 0;
+            csv += `,${sales > 0 ? sales.toFixed(2) : '-'}`;
+            totalSales += sales;
+        }
+        csv += `,${totalSales.toFixed(2)}\n`;
+        
+        // صف إجمالي المشتريات اليومية
+        csv += 'إجمالي المشتريات';
+        let totalPurchases = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayData = dataByDate[day];
+            const purchases = dayData ? (dayData.total_purchases || 0) : 0;
+            csv += `,${purchases > 0 ? purchases.toFixed(2) : '-'}`;
+            totalPurchases += purchases;
+        }
+        csv += `,${totalPurchases.toFixed(2)}\n`;
+        
+        // صف الصافي النقدي اليومي
+        csv += 'الصافي النقدي';
+        let totalNetCash = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayData = dataByDate[day];
+            const netCash = dayData ? (dayData.net_cash || 0) : 0;
+            csv += `,${netCash !== 0 ? netCash.toFixed(2) : '-'}`;
+            totalNetCash += netCash;
+        }
+        csv += `,${totalNetCash.toFixed(2)}\n`;
+        
+        // صف صافي الربح اليومي
+        csv += 'صافي الربح';
+        let totalProfit = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayData = dataByDate[day];
+            const profit = dayData ? (dayData.net_profit || 0) : 0;
+            csv += `,${profit !== 0 ? profit.toFixed(2) : '-'}`;
+            totalProfit += profit;
+        }
+        csv += `,${totalProfit.toFixed(2)}\n`;
+        
+        csv += '\n';
+        
+        // الملخص الشهري
+        csv += 'الملخص الشهري\n';
         csv += `إجمالي المبيعات الشهرية:,${totalSales.toFixed(2)} د.أ\n`;
         csv += `إجمالي المشتريات الشهرية:,${totalPurchases.toFixed(2)} د.أ\n`;
-        csv += `إجمالي الإتلاف الشهري:,${totalDamage.toFixed(2)} د.أ\n`;
-        csv += `صافي الربح الشهري:,${totalProfit.toFixed(2)} د.أ\n\n`;
+        csv += `إجمالي الإتلاف الشهري:,${categoryTotals['الإتلاف'].toFixed(2)} د.أ\n`;
+        csv += `الصافي النقدي الشهري:,${totalNetCash.toFixed(2)} د.أ\n`;
+        csv += `صافي الربح الشهري:,${totalProfit.toFixed(2)} د.أ\n`;
         
-        csv += 'تفاصيل المشتريات الشهرية:\n';
-        csv += 'التاريخ,الصنف,السعر\n';
-        
-        data.forEach(record => {
-            const date = new Date(record.inventory_date).toLocaleDateString('ar-JO');
-            const purchases = record.purchase_items || {};
-            Object.entries(purchases).forEach(([category, price]) => {
-                csv += `${date},${category},${price}\n`;
-            });
+        csv += '\n\nتفاصيل المشتريات:\n';
+        allCategories.forEach(category => {
+            if (category !== 'الإتلاف' && categoryTotals[category] > 0) {
+                csv += `${category}:,${categoryTotals[category].toFixed(2)} د.أ\n`;
+            }
         });
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
