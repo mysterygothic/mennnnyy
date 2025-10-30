@@ -102,10 +102,7 @@
     
     // ==================== THEME TOGGLE ====================
     function initThemeToggle() {
-        const sidebar = document.querySelector('.admin-sidebar');
-        if (!sidebar) return;
-        
-        // Create theme toggle
+        // Create theme toggle (fixed position, not in sidebar)
         const themeContainer = document.createElement('div');
         themeContainer.className = 'theme-toggle-container';
         
@@ -113,16 +110,12 @@
         const isDark = currentTheme === 'dark';
         
         themeContainer.innerHTML = `
-            <div class="theme-toggle ${isDark ? 'active' : ''}" id="themeToggle" role="button" tabindex="0" aria-label="تبديل الوضع ${isDark ? 'الفاتح' : 'المظلم'}">
-                <div class="theme-toggle-label">
-                    <span class="theme-icon">${isDark ? '🌙' : '☀️'}</span>
-                    <span>${isDark ? 'الوضع المظلم' : 'الوضع الفاتح'}</span>
-                </div>
-                <div class="toggle-switch"></div>
+            <div class="theme-toggle ${isDark ? 'active' : ''}" id="themeToggle" role="button" tabindex="0" aria-label="تبديل الوضع ${isDark ? 'الفاتح' : 'المظلم'}" title="${isDark ? 'الوضع الفاتح' : 'الوضع المظلم'}">
+                <span class="theme-icon">${isDark ? '🌙' : '☀️'}</span>
             </div>
         `;
         
-        sidebar.appendChild(themeContainer);
+        document.body.appendChild(themeContainer);
         
         const themeToggle = document.getElementById('themeToggle');
         
@@ -157,18 +150,14 @@
                 themeToggle.classList.remove('active');
             }
             
-            const label = themeToggle.querySelector('.theme-toggle-label span:last-child');
             const icon = themeToggle.querySelector('.theme-icon');
-            
-            if (label) {
-                label.textContent = isDark ? 'الوضع المظلم' : 'الوضع الفاتح';
-            }
             
             if (icon) {
                 icon.textContent = isDark ? '🌙' : '☀️';
             }
             
             themeToggle.setAttribute('aria-label', `تبديل الوضع ${isDark ? 'الفاتح' : 'المظلم'}`);
+            themeToggle.setAttribute('title', isDark ? 'الوضع الفاتح' : 'الوضع المظلم');
         }
         
         function showThemeNotification(theme) {
