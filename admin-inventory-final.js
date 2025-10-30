@@ -24,7 +24,27 @@ async function initializePage() {
 
 async function loadPurchaseCategories() {
     try {
-        if (!window.DB || !window.DB.supabase) return;
+        if (!window.DB || !window.DB.supabase) {
+            console.warn('Database not available, using default categories');
+            purchaseCategories = [
+                { id: 1, category_name: 'لحوم', display_order: 1 },
+                { id: 2, category_name: 'دجاج', display_order: 2 },
+                { id: 3, category_name: 'فاين', display_order: 3 },
+                { id: 4, category_name: 'خضار', display_order: 4 },
+                { id: 5, category_name: 'بندورة', display_order: 5 },
+                { id: 6, category_name: 'بطاطا', display_order: 6 },
+                { id: 7, category_name: 'بصل', display_order: 7 },
+                { id: 8, category_name: 'ثوم', display_order: 8 },
+                { id: 9, category_name: 'توابل', display_order: 9 },
+                { id: 10, category_name: 'زيت', display_order: 10 },
+                { id: 11, category_name: 'أرز', display_order: 11 },
+                { id: 12, category_name: 'خبز', display_order: 12 },
+                { id: 13, category_name: 'مشروبات', display_order: 13 },
+                { id: 14, category_name: 'أخرى', display_order: 14 }
+            ];
+            renderPurchasesGrid();
+            return;
+        }
         
         const { data, error } = await window.DB.supabase
             .from('purchase_categories')
@@ -34,20 +54,90 @@ async function loadPurchaseCategories() {
         
         if (error) {
             console.error('Error loading categories:', error);
+            console.log('Using default categories instead');
+            purchaseCategories = [
+                { id: 1, category_name: 'لحوم', display_order: 1 },
+                { id: 2, category_name: 'دجاج', display_order: 2 },
+                { id: 3, category_name: 'فاين', display_order: 3 },
+                { id: 4, category_name: 'خضار', display_order: 4 },
+                { id: 5, category_name: 'بندورة', display_order: 5 },
+                { id: 6, category_name: 'بطاطا', display_order: 6 },
+                { id: 7, category_name: 'بصل', display_order: 7 },
+                { id: 8, category_name: 'ثوم', display_order: 8 },
+                { id: 9, category_name: 'توابل', display_order: 9 },
+                { id: 10, category_name: 'زيت', display_order: 10 },
+                { id: 11, category_name: 'أرز', display_order: 11 },
+                { id: 12, category_name: 'خبز', display_order: 12 },
+                { id: 13, category_name: 'مشروبات', display_order: 13 },
+                { id: 14, category_name: 'أخرى', display_order: 14 }
+            ];
+            renderPurchasesGrid();
             return;
         }
         
-        purchaseCategories = data || [];
+        if (!data || data.length === 0) {
+            console.log('No categories found in database, using defaults');
+            purchaseCategories = [
+                { id: 1, category_name: 'لحوم', display_order: 1 },
+                { id: 2, category_name: 'دجاج', display_order: 2 },
+                { id: 3, category_name: 'فاين', display_order: 3 },
+                { id: 4, category_name: 'خضار', display_order: 4 },
+                { id: 5, category_name: 'بندورة', display_order: 5 },
+                { id: 6, category_name: 'بطاطا', display_order: 6 },
+                { id: 7, category_name: 'بصل', display_order: 7 },
+                { id: 8, category_name: 'ثوم', display_order: 8 },
+                { id: 9, category_name: 'توابل', display_order: 9 },
+                { id: 10, category_name: 'زيت', display_order: 10 },
+                { id: 11, category_name: 'أرز', display_order: 11 },
+                { id: 12, category_name: 'خبز', display_order: 12 },
+                { id: 13, category_name: 'مشروبات', display_order: 13 },
+                { id: 14, category_name: 'أخرى', display_order: 14 }
+            ];
+        } else {
+            purchaseCategories = data;
+            console.log('Loaded categories from database:', data.length);
+        }
+        
         renderPurchasesGrid();
         
     } catch (error) {
         console.error('Error:', error);
+        purchaseCategories = [
+            { id: 1, category_name: 'لحوم', display_order: 1 },
+            { id: 2, category_name: 'دجاج', display_order: 2 },
+            { id: 3, category_name: 'فاين', display_order: 3 },
+            { id: 4, category_name: 'خضار', display_order: 4 },
+            { id: 5, category_name: 'بندورة', display_order: 5 },
+            { id: 6, category_name: 'بطاطا', display_order: 6 },
+            { id: 7, category_name: 'بصل', display_order: 7 },
+            { id: 8, category_name: 'ثوم', display_order: 8 },
+            { id: 9, category_name: 'توابل', display_order: 9 },
+            { id: 10, category_name: 'زيت', display_order: 10 },
+            { id: 11, category_name: 'أرز', display_order: 11 },
+            { id: 12, category_name: 'خبز', display_order: 12 },
+            { id: 13, category_name: 'مشروبات', display_order: 13 },
+            { id: 14, category_name: 'أخرى', display_order: 14 }
+        ];
+        renderPurchasesGrid();
     }
 }
 
 function renderPurchasesGrid() {
     const grid = document.getElementById('purchasesGrid');
+    
+    if (!grid) {
+        console.error('purchasesGrid element not found!');
+        return;
+    }
+    
     grid.innerHTML = '';
+    
+    console.log('Rendering purchases grid with', purchaseCategories.length, 'categories');
+    
+    if (purchaseCategories.length === 0) {
+        grid.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">لا توجد فئات متاحة</p>';
+        return;
+    }
     
     purchaseCategories.forEach(category => {
         const item = document.createElement('div');
@@ -65,6 +155,8 @@ function renderPurchasesGrid() {
         `;
         grid.appendChild(item);
     });
+    
+    console.log('Grid rendered successfully');
 }
 
 async function loadInventoryData(date) {
