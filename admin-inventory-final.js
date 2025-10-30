@@ -68,7 +68,7 @@ function renderExpensesList() {
             items.forEach(item => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'expense-item';
-                itemDiv.innerHTML = `<label>${item.item_name}</label><input type="number" class="expense-input" data-item="${item.item_name}" min="0" step="0.5" value="0" placeholder="0" onchange="calculateAllTotals()">`;
+                itemDiv.innerHTML = `<label>${item.item_name}</label><input type="number" class="expense-input" data-item="${item.item_name}" min="0" step="0.5" placeholder="0" onchange="calculateAllTotals()">`;
                 itemsContainer.appendChild(itemDiv);
             });
             
@@ -110,15 +110,18 @@ async function loadInventoryData(date) {
         }
         
         if (data) {
-            document.getElementById('totalSalesInput').value = data.total_sales || 0;
+            document.getElementById('totalSalesInput').value = data.total_sales || '';
             
             const purchases = data.purchase_items || {};
             document.querySelectorAll('.expense-input').forEach(input => {
                 const item = input.dataset.item;
-                input.value = purchases[item] || 0;
+                const value = purchases[item];
+                input.value = value > 0 ? value : '';
             });
             
-            document.getElementById('inventoryNotes').value = data.notes || '';
+            if (document.getElementById('inventoryNotes')) {
+                document.getElementById('inventoryNotes').value = data.notes || '';
+            }
         } else {
             clearForm();
         }
@@ -131,11 +134,13 @@ async function loadInventoryData(date) {
 }
 
 function clearForm() {
-    document.getElementById('totalSalesInput').value = 0;
+    document.getElementById('totalSalesInput').value = '';
     document.querySelectorAll('.expense-input').forEach(input => {
-        input.value = 0;
+        input.value = '';
     });
-    document.getElementById('inventoryNotes').value = '';
+    if (document.getElementById('inventoryNotes')) {
+        document.getElementById('inventoryNotes').value = '';
+    }
     calculateAllTotals();
 }
 
@@ -516,39 +521,45 @@ function exportToExcel() {
     const date = document.getElementById('inventoryDate').value;
     const formattedDate = new Date(date).toLocaleDateString('ar-JO');
     
-    const salesTotal = document.getElementById('totalSalesInput').value;
-    const damageTotal = document.getElementById('totalDamageInput').value;
+    const salesTotal = parseFloat(document.getElementById('totalSalesInput').value) || 0;
     
-    const purchasesData = [];
-    document.querySelectorAll('.purchase-input').forEach(input => {
-        const category = input.dataset.category;
+    const expensesData = [];
+    let totalExpenses = 0;
+    let totalDamage = 0;
+    
+    document.querySelectorAll('.expense-input').forEach(input => {
+        const item = input.dataset.item;
         const value = parseFloat(input.value) || 0;
         if (value > 0) {
-            purchasesData.push([category, value.toFixed(2)]);
+            expensesData.push([item, value.toFixed(2)]);
+            totalExpenses += value;
+            
+            if (item && (item.includes('تلف') || item.includes('صلاحية') || item.includes('بواقي') || item.includes('مرتجعات'))) {
+                totalDamage += value;
+            }
         }
     });
     
-    const totalPurchases = document.getElementById('totalPurchasesDisplay').textContent;
-    const netCash = document.getElementById('netCashDisplay').textContent;
-    const netProfit = document.getElementById('netProfitDisplay').textContent;
-    const notes = document.getElementById('inventoryNotes').value;
+    const netCash = salesTotal - totalExpenses;
+    const netProfit = salesTotal - totalExpenses;
+    const notes = document.getElementById('inventoryNotes') ? document.getElementById('inventoryNotes').value : '';
     
     let csv = '\uFEFF';
     csv += `تقرير الجرد اليومي - ${formattedDate}\n\n`;
     
     csv += 'المبيعات اليومية:\n';
-    csv += `إجمالي المبيعات:,${salesTotal} د.أ\n\n`;
+    csv += `إجمالي المبيعات:,${salesTotal.toFixed(2)} د.أ\n\n`;
     
-    csv += 'المشتريات اليومية:\n';
-    csv += 'الصنف,السعر\n';
-    purchasesData.forEach(row => csv += row.join(',') + ' د.أ\n');
-    csv += `المجموع الكلي:,${totalPurchases}\n\n`;
+    csv += 'المشتريات والمصاريف:\n';
+    csv += 'الصنف,المبلغ\n';
+    expensesData.forEach(row => csv += row.join(',') + ' د.أ\n');
+    csv += `المجموع الكلي:,${totalExpenses.toFixed(2)} د.أ\n\n`;
     
-    csv += `الإتلاف اليومي:,${damageTotal} د.أ\n\n`;
+    csv += `إجمالي الإتلاف:,${totalDamage.toFixed(2)} د.أ\n\n`;
     
     csv += 'الملخص المالي:\n';
-    csv += `الصافي النقدي:,${netCash}\n`;
-    csv += `صافي الربح:,${netProfit}\n\n`;
+    csv += `الصافي النقدي:,${netCash.toFixed(2)} د.أ\n`;
+    csv += `صافي الربح:,${netProfit.toFixed(2)} د.أ\n\n`;
     
     if (notes) {
         csv += `ملاحظات:\n${notes}\n`;
@@ -607,10 +618,16 @@ async function exportMonthlyInventory() {
             });
         }
         
-        // جمع جميع الأصناف
-        const allCategories = new Set();
-        purchaseCategories.forEach(cat => allCategories.add(cat.category_name));
-        allCategories.add('الإتلاف');
+        // جمع جميع الأصناف من البيانات الفعلية
+        const allItems = new Set();
+        if (data) {
+            data.forEach(record => {
+                const purchases = record.purchase_items || {};
+                Object.keys(purchases).forEach(item => allItems.add(item));
+            });
+        }
+        
+        const itemsArray = Array.from(allItems).sort();
         
         let csv = '\uFEFF';
         csv += `الجرد الشهري - ${monthName}\n\n`;
@@ -622,31 +639,27 @@ async function exportMonthlyInventory() {
         }
         csv += ',المجموع الشهري\n';
         
-        // صفوف المشتريات
-        const categoryTotals = {};
-        allCategories.forEach(category => {
-            csv += category;
-            let categoryTotal = 0;
+        // صفوف المشتريات والمصاريف
+        const itemTotals = {};
+        itemsArray.forEach(item => {
+            csv += `"${item}"`;
+            let itemTotal = 0;
             
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayData = dataByDate[day];
                 let value = 0;
                 
                 if (dayData) {
-                    if (category === 'الإتلاف') {
-                        value = dayData.total_damage || 0;
-                    } else {
-                        const purchases = dayData.purchase_items || {};
-                        value = purchases[category] || 0;
-                    }
+                    const purchases = dayData.purchase_items || {};
+                    value = purchases[item] || 0;
                 }
                 
-                csv += `,${value > 0 ? value.toFixed(2) : '-'}`;
-                categoryTotal += value;
+                csv += `,${value > 0 ? value.toFixed(2) : ''}`;
+                itemTotal += value;
             }
             
-            csv += `,${categoryTotal.toFixed(2)}\n`;
-            categoryTotals[category] = categoryTotal;
+            csv += `,${itemTotal.toFixed(2)}\n`;
+            itemTotals[item] = itemTotal;
         });
         
         csv += '\n';
@@ -700,15 +713,15 @@ async function exportMonthlyInventory() {
         // الملخص الشهري
         csv += 'الملخص الشهري\n';
         csv += `إجمالي المبيعات الشهرية:,${totalSales.toFixed(2)} د.أ\n`;
-        csv += `إجمالي المشتريات الشهرية:,${totalPurchases.toFixed(2)} د.أ\n`;
-        csv += `إجمالي الإتلاف الشهري:,${categoryTotals['الإتلاف'].toFixed(2)} د.أ\n`;
+        csv += `إجمالي المشتريات والمصاريف:,${totalPurchases.toFixed(2)} د.أ\n`;
         csv += `الصافي النقدي الشهري:,${totalNetCash.toFixed(2)} د.أ\n`;
         csv += `صافي الربح الشهري:,${totalProfit.toFixed(2)} د.أ\n`;
         
-        csv += '\n\nتفاصيل المشتريات:\n';
-        allCategories.forEach(category => {
-            if (category !== 'الإتلاف' && categoryTotals[category] > 0) {
-                csv += `${category}:,${categoryTotals[category].toFixed(2)} د.أ\n`;
+        csv += '\n\nتفاصيل المشتريات والمصاريف:\n';
+        csv += 'الصنف,المجموع الشهري\n';
+        itemsArray.forEach(item => {
+            if (itemTotals[item] > 0) {
+                csv += `"${item}",${itemTotals[item].toFixed(2)} د.أ\n`;
             }
         });
         
