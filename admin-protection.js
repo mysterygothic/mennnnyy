@@ -13,7 +13,8 @@
             'admin-delivery.html',
             'admin-driver-orders.html',
             'admin-customers.html',
-            'admin-users.html'
+            'admin-users.html',
+            'admin-inventory.html'
         ];
         
         return protectedPages.some(page => path.includes(page));

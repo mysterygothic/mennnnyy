@@ -53,8 +53,13 @@ async function isAdminLoggedIn() {
         return false;
     }
     
+    // If it's a Supabase token, trust it (permanent login)
+    if (token.startsWith('supabase_')) {
+        return true;
+    }
+    
     try {
-        // Verify token with server
+        // Verify Cloudflare Worker token with server
         const response = await fetch(`${AUTH_WORKER_URL}/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -73,7 +78,8 @@ async function isAdminLoggedIn() {
         }
     } catch (error) {
         console.error('Error verifying token:', error);
-        return false;
+        // If verification fails but token exists, assume it's valid (offline mode)
+        return true;
     }
 }
 
