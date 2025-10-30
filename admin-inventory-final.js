@@ -24,139 +24,74 @@ async function initializePage() {
 
 async function loadPurchaseCategories() {
     try {
-        if (!window.DB || !window.DB.supabase) {
-            console.warn('Database not available, using default categories');
-            purchaseCategories = [
-                { id: 1, category_name: 'لحوم', display_order: 1 },
-                { id: 2, category_name: 'دجاج', display_order: 2 },
-                { id: 3, category_name: 'فاين', display_order: 3 },
-                { id: 4, category_name: 'خضار', display_order: 4 },
-                { id: 5, category_name: 'بندورة', display_order: 5 },
-                { id: 6, category_name: 'بطاطا', display_order: 6 },
-                { id: 7, category_name: 'بصل', display_order: 7 },
-                { id: 8, category_name: 'ثوم', display_order: 8 },
-                { id: 9, category_name: 'توابل', display_order: 9 },
-                { id: 10, category_name: 'زيت', display_order: 10 },
-                { id: 11, category_name: 'أرز', display_order: 11 },
-                { id: 12, category_name: 'خبز', display_order: 12 },
-                { id: 13, category_name: 'مشروبات', display_order: 13 },
-                { id: 14, category_name: 'أخرى', display_order: 14 }
-            ];
-            renderPurchasesGrid();
-            return;
-        }
-        
         const { data, error } = await window.DB.supabase
-            .from('purchase_categories')
+            .from('expense_categories')
             .select('*')
             .eq('is_active', true)
             .order('display_order');
         
-        if (error) {
-            console.error('Error loading categories:', error);
-            console.log('Using default categories instead');
-            purchaseCategories = [
-                { id: 1, category_name: 'لحوم', display_order: 1 },
-                { id: 2, category_name: 'دجاج', display_order: 2 },
-                { id: 3, category_name: 'فاين', display_order: 3 },
-                { id: 4, category_name: 'خضار', display_order: 4 },
-                { id: 5, category_name: 'بندورة', display_order: 5 },
-                { id: 6, category_name: 'بطاطا', display_order: 6 },
-                { id: 7, category_name: 'بصل', display_order: 7 },
-                { id: 8, category_name: 'ثوم', display_order: 8 },
-                { id: 9, category_name: 'توابل', display_order: 9 },
-                { id: 10, category_name: 'زيت', display_order: 10 },
-                { id: 11, category_name: 'أرز', display_order: 11 },
-                { id: 12, category_name: 'خبز', display_order: 12 },
-                { id: 13, category_name: 'مشروبات', display_order: 13 },
-                { id: 14, category_name: 'أخرى', display_order: 14 }
-            ];
-            renderPurchasesGrid();
-            return;
-        }
+        if (error) throw error;
         
-        if (!data || data.length === 0) {
-            console.log('No categories found in database, using defaults');
-            purchaseCategories = [
-                { id: 1, category_name: 'لحوم', display_order: 1 },
-                { id: 2, category_name: 'دجاج', display_order: 2 },
-                { id: 3, category_name: 'فاين', display_order: 3 },
-                { id: 4, category_name: 'خضار', display_order: 4 },
-                { id: 5, category_name: 'بندورة', display_order: 5 },
-                { id: 6, category_name: 'بطاطا', display_order: 6 },
-                { id: 7, category_name: 'بصل', display_order: 7 },
-                { id: 8, category_name: 'ثوم', display_order: 8 },
-                { id: 9, category_name: 'توابل', display_order: 9 },
-                { id: 10, category_name: 'زيت', display_order: 10 },
-                { id: 11, category_name: 'أرز', display_order: 11 },
-                { id: 12, category_name: 'خبز', display_order: 12 },
-                { id: 13, category_name: 'مشروبات', display_order: 13 },
-                { id: 14, category_name: 'أخرى', display_order: 14 }
-            ];
-        } else {
-            purchaseCategories = data;
-            console.log('Loaded categories from database:', data.length);
-        }
-        
-        renderPurchasesGrid();
+        purchaseCategories = data || [];
+        renderExpensesList();
         
     } catch (error) {
         console.error('Error:', error);
-        purchaseCategories = [
-            { id: 1, category_name: 'لحوم', display_order: 1 },
-            { id: 2, category_name: 'دجاج', display_order: 2 },
-            { id: 3, category_name: 'فاين', display_order: 3 },
-            { id: 4, category_name: 'خضار', display_order: 4 },
-            { id: 5, category_name: 'بندورة', display_order: 5 },
-            { id: 6, category_name: 'بطاطا', display_order: 6 },
-            { id: 7, category_name: 'بصل', display_order: 7 },
-            { id: 8, category_name: 'ثوم', display_order: 8 },
-            { id: 9, category_name: 'توابل', display_order: 9 },
-            { id: 10, category_name: 'زيت', display_order: 10 },
-            { id: 11, category_name: 'أرز', display_order: 11 },
-            { id: 12, category_name: 'خبز', display_order: 12 },
-            { id: 13, category_name: 'مشروبات', display_order: 13 },
-            { id: 14, category_name: 'أخرى', display_order: 14 }
-        ];
-        renderPurchasesGrid();
+        purchaseCategories = [];
+        renderExpensesList();
     }
 }
 
-function renderPurchasesGrid() {
-    const grid = document.getElementById('purchasesGrid');
+function renderExpensesList() {
+    const list = document.getElementById('expensesList');
+    if (!list) return;
     
-    if (!grid) {
-        console.error('purchasesGrid element not found!');
-        return;
-    }
-    
-    grid.innerHTML = '';
-    
-    console.log('Rendering purchases grid with', purchaseCategories.length, 'categories');
-    
-    if (purchaseCategories.length === 0) {
-        grid.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">لا توجد فئات متاحة</p>';
-        return;
-    }
-    
-    purchaseCategories.forEach(category => {
-        const item = document.createElement('div');
-        item.className = 'purchase-item';
-        item.innerHTML = `
-            <label>${category.category_name}</label>
-            <input type="number" 
-                   class="purchase-input" 
-                   data-category="${category.category_name}"
-                   min="0" 
-                   step="0.5" 
-                   value="0"
-                   placeholder="0.00"
-                   onchange="calculateAllTotals()">
-        `;
-        grid.appendChild(item);
+    const grouped = {};
+    purchaseCategories.forEach(item => {
+        if (!grouped[item.main_category]) grouped[item.main_category] = {};
+        if (!grouped[item.main_category][item.sub_category]) grouped[item.main_category][item.sub_category] = [];
+        grouped[item.main_category][item.sub_category].push(item);
     });
     
-    console.log('Grid rendered successfully');
+    list.innerHTML = '';
+    Object.entries(grouped).forEach(([mainCat, subCats]) => {
+        const catGroup = document.createElement('div');
+        catGroup.className = 'expense-category-group';
+        catGroup.innerHTML = `<div class="category-header" onclick="toggleCategory(this)"><span>${mainCat}</span><span class="toggle-icon">▼</span></div>`;
+        
+        Object.entries(subCats).forEach(([subCat, items]) => {
+            const subGroup = document.createElement('div');
+            subGroup.className = 'subcategory-group';
+            subGroup.innerHTML = `<div class="subcategory-header">${subCat || 'عام'}</div><div class="expense-items"></div>`;
+            
+            const itemsContainer = subGroup.querySelector('.expense-items');
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'expense-item';
+                itemDiv.innerHTML = `<label>${item.item_name}</label><input type="number" class="expense-input" data-item="${item.item_name}" min="0" step="0.5" value="0" placeholder="0" onchange="calculateAllTotals()">`;
+                itemsContainer.appendChild(itemDiv);
+            });
+            
+            catGroup.appendChild(subGroup);
+        });
+        
+        list.appendChild(catGroup);
+    });
+}
+
+function toggleCategory(header) {
+    header.classList.toggle('collapsed');
+    const group = header.parentElement;
+    const subgroups = group.querySelectorAll('.subcategory-group');
+    subgroups.forEach(sg => sg.style.display = header.classList.contains('collapsed') ? 'none' : 'block');
+}
+
+function filterItems() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.expense-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(search) ? 'flex' : 'none';
+    });
 }
 
 async function loadInventoryData(date) {
@@ -176,12 +111,11 @@ async function loadInventoryData(date) {
         
         if (data) {
             document.getElementById('totalSalesInput').value = data.total_sales || 0;
-            document.getElementById('totalDamageInput').value = data.total_damage || 0;
             
             const purchases = data.purchase_items || {};
-            document.querySelectorAll('.purchase-input').forEach(input => {
-                const category = input.dataset.category;
-                input.value = purchases[category] || 0;
+            document.querySelectorAll('.expense-input').forEach(input => {
+                const item = input.dataset.item;
+                input.value = purchases[item] || 0;
             });
             
             document.getElementById('inventoryNotes').value = data.notes || '';
@@ -198,8 +132,7 @@ async function loadInventoryData(date) {
 
 function clearForm() {
     document.getElementById('totalSalesInput').value = 0;
-    document.getElementById('totalDamageInput').value = 0;
-    document.querySelectorAll('.purchase-input').forEach(input => {
+    document.querySelectorAll('.expense-input').forEach(input => {
         input.value = 0;
     });
     document.getElementById('inventoryNotes').value = '';
@@ -208,23 +141,32 @@ function clearForm() {
 
 function calculateAllTotals() {
     const salesTotal = parseFloat(document.getElementById('totalSalesInput').value) || 0;
-    const damageTotal = parseFloat(document.getElementById('totalDamageInput').value) || 0;
     
     let purchasesTotal = 0;
-    document.querySelectorAll('.purchase-input').forEach(input => {
-        purchasesTotal += parseFloat(input.value) || 0;
+    let damageTotal = 0;
+    
+    document.querySelectorAll('.expense-input').forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        const item = input.dataset.item;
+        
+        if (item && item.includes('تلف') || item.includes('صلاحية') || item.includes('بواقي') || item.includes('مرتجعات')) {
+            damageTotal += value;
+        }
+        purchasesTotal += value;
     });
     
     const netCash = salesTotal - purchasesTotal;
-    const netProfit = salesTotal - purchasesTotal - damageTotal;
+    const netProfit = salesTotal - purchasesTotal;
     
     document.getElementById('purchasesTotal').textContent = purchasesTotal.toFixed(2) + ' د.أ';
     
-    document.getElementById('totalSalesDisplay').textContent = salesTotal.toFixed(2) + ' د.أ';
-    document.getElementById('totalPurchasesDisplay').textContent = purchasesTotal.toFixed(2) + ' د.أ';
-    document.getElementById('totalDamageDisplay').textContent = damageTotal.toFixed(2) + ' د.أ';
-    document.getElementById('netCashDisplay').textContent = netCash.toFixed(2) + ' د.أ';
-    document.getElementById('netProfitDisplay').textContent = netProfit.toFixed(2) + ' د.أ';
+    if (document.getElementById('totalSalesDisplay')) {
+        document.getElementById('totalSalesDisplay').textContent = salesTotal.toFixed(2) + ' د.أ';
+        document.getElementById('totalPurchasesDisplay').textContent = purchasesTotal.toFixed(2) + ' د.أ';
+        document.getElementById('totalDamageDisplay').textContent = damageTotal.toFixed(2) + ' د.أ';
+        document.getElementById('netCashDisplay').textContent = netCash.toFixed(2) + ' د.أ';
+        document.getElementById('netProfitDisplay').textContent = netProfit.toFixed(2) + ' د.أ';
+    }
     
     updateDistributionChart(salesTotal, purchasesTotal, damageTotal);
 }
@@ -232,16 +174,20 @@ function calculateAllTotals() {
 async function saveInventory() {
     try {
         const purchaseItems = {};
-        document.querySelectorAll('.purchase-input').forEach(input => {
-            const category = input.dataset.category;
+        let totalDamage = 0;
+        
+        document.querySelectorAll('.expense-input').forEach(input => {
+            const item = input.dataset.item;
             const value = parseFloat(input.value) || 0;
             if (value > 0) {
-                purchaseItems[category] = value;
+                purchaseItems[item] = value;
+                if (item && (item.includes('تلف') || item.includes('صلاحية') || item.includes('بواقي') || item.includes('مرتجعات'))) {
+                    totalDamage += value;
+                }
             }
         });
         
         const totalSales = parseFloat(document.getElementById('totalSalesInput').value) || 0;
-        const totalDamage = parseFloat(document.getElementById('totalDamageInput').value) || 0;
         const notes = document.getElementById('inventoryNotes').value.trim();
         const date = document.getElementById('inventoryDate').value;
         
