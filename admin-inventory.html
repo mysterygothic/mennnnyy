@@ -90,6 +90,17 @@
                 </div>
             </div>
 
+            <!-- Notifications Panel -->
+            <div id="notificationsPanel" style="position: fixed; top: 72px; right: 16px; width: 360px; max-height: 70vh; overflow: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: none; z-index: 10000;">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding: 12px 14px; border-bottom:1px solid #f3f4f6; background:#f9fafb; border-top-left-radius:12px; border-top-right-radius:12px;">
+                    <div style="font-weight:700;">الإشعارات</div>
+                    <div>
+                        <button class="icon-button" onclick="markAllNotificationsRead()" style="font-size: 12px; padding: 6px 10px; border:1px solid #e5e7eb; border-radius:8px; background:white;">تحديد الكل كمقروء</button>
+                    </div>
+                </div>
+                <div id="notificationsList" style="padding: 8px 8px;"></div>
+            </div>
+
             <!-- Statistics Cards -->
             <div class="inventory-stats">
                 <div class="stat-card sales-card">
@@ -236,6 +247,10 @@
                 <div class="section-header">
                     <h2>📈 التحليلات البيانية</h2>
                     <div class="header-actions">
+                        <button id="notificationsBell" class="icon-button" title="الإشعارات" onclick="toggleNotificationsPanel()" style="position: relative; margin-inline-end: 8px;">
+                            🔔
+                            <span id="notificationsBadge" style="position:absolute; top:-4px; right:-6px; background:#ef4444; color:white; border-radius:12px; padding:0 6px; font-size:12px; display:none;">0</span>
+                        </button>
                         <select id="chartPeriodSelect" class="month-select" onchange="updateChartsByPeriod()">
                             <option value="last7">آخر 7 أيام</option>
                             <option value="last30">آخر 30 يوم</option>

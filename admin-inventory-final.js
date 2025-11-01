@@ -19,6 +19,7 @@ async function initializePage() {
     populateChartYearSelect();
     populateMonthSelect();
     populateChartMonthSelect();
+    await initNotifications();
     
     dateInput.addEventListener('change', async function() {
         await loadInventoryData(this.value);
@@ -831,6 +832,149 @@ function updateDistributionChart(sales, purchases, damage, salaries) {
         charts.distribution.data.datasets[0].data = [sales, purchases, damage, salaries || 0];
         charts.distribution.update();
     }
+}
+
+async function initNotifications() {
+    try {
+        await refreshNotificationsPanel();
+        await evaluateNotificationsNow();
+    } catch (e) {}
+}
+
+function toggleNotificationsPanel() {
+    const panel = document.getElementById('notificationsPanel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
+}
+
+function updateNotificationsBadge(count) {
+    const badge = document.getElementById('notificationsBadge');
+    if (!badge) return;
+    if (!count || count <= 0) {
+        badge.style.display = 'none';
+        badge.textContent = '0';
+    } else {
+        badge.style.display = 'inline-block';
+        badge.textContent = String(count);
+    }
+}
+
+async function refreshNotificationsPanel() {
+    if (!window.DB || !window.DB.supabase) return;
+    const listEl = document.getElementById('notificationsList');
+    if (!listEl) return;
+    const { data, error } = await window.DB.supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+    if (error) return;
+    const unread = (data || []).filter(n => !n.is_read).length;
+    updateNotificationsBadge(unread);
+    listEl.innerHTML = (data || []).map(renderNotificationItem).join('') || '<div style="padding:12px; color:#6b7280;">لا توجد إشعارات</div>';
+}
+
+function renderNotificationItem(n) {
+    const color = n.severity === 'critical' ? '#ef4444' : n.severity === 'warning' ? '#f59e0b' : '#10b981';
+    const bg = n.is_read ? '#ffffff' : '#f8fafc';
+    const ts = new Date(n.created_at).toLocaleString('ar-JO');
+    return `
+      <div style="background:${bg}; border:1px solid #f1f5f9; border-radius:10px; padding:10px 12px; margin:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-weight:700; color:${color};">${n.title || ''}</div>
+          <div style="font-size:12px; color:#6b7280;">${ts}</div>
+        </div>
+        <div style="margin-top:6px; color:#374151;">${n.message || ''}</div>
+      </div>
+    `;
+}
+
+async function markAllNotificationsRead() {
+    if (!window.DB || !window.DB.supabase) return;
+    await window.DB.supabase.from('notifications').update({ is_read: true }).eq('is_read', false);
+    await refreshNotificationsPanel();
+}
+
+async function generateNotification(payload) {
+    if (!window.DB || !window.DB.supabase) return;
+    const n = {
+        type: payload.type || 'info',
+        title: payload.title || '',
+        message: payload.message || '',
+        severity: payload.severity || 'info',
+        meta: payload.meta || {},
+        is_read: false
+    };
+    await window.DB.supabase.from('notifications').insert(n);
+}
+
+async function evaluateNotificationsNow() {
+    try {
+        await checkSevenDaySalesTrend();
+        await monthlyDigestForCurrentMonth();
+        await refreshNotificationsPanel();
+    } catch (e) {}
+}
+
+async function checkSevenDaySalesTrend() {
+    if (!window.DB || !window.DB.supabase) return;
+    const today = new Date();
+    const d7 = new Date(); d7.setDate(today.getDate() - 7);
+    const d14 = new Date(); d14.setDate(today.getDate() - 14);
+    const { data: last7, error: e1 } = await window.DB.supabase
+        .from('daily_inventory')
+        .select('total_sales, inventory_date')
+        .gte('inventory_date', d7.toISOString().split('T')[0])
+        .lte('inventory_date', today.toISOString().split('T')[0]);
+    const { data: prev7, error: e2 } = await window.DB.supabase
+        .from('daily_inventory')
+        .select('total_sales, inventory_date')
+        .gte('inventory_date', d14.toISOString().split('T')[0])
+        .lt('inventory_date', d7.toISOString().split('T')[0]);
+    if (e1 || e2) return;
+    const avg = arr => {
+        if (!arr || arr.length === 0) return 0;
+        return arr.reduce((s, r) => s + (parseFloat(r.total_sales) || 0), 0) / arr.length;
+    };
+    const a1 = avg(last7);
+    const a2 = avg(prev7);
+    if (a2 > 0) {
+        const drop = (a2 - a1) / a2;
+        const threshold = 0.2;
+        if (drop >= threshold) {
+            await generateNotification({
+                type: 'trend',
+                title: 'انخفاض المبيعات آخر 7 أيام',
+                message: `انخفاض بنسبة ${(drop*100).toFixed(0)}% مقارنة بالأيام السبعة السابقة`,
+                severity: 'warning',
+                meta: { a1, a2 }
+            });
+        }
+    }
+}
+
+async function monthlyDigestForCurrentMonth() {
+    if (!window.DB || !window.DB.supabase) return;
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = (now.getMonth() + 1).toString().padStart(2, '0');
+    const start = `${y}-${m}-01`;
+    const end = new Date(y, parseInt(m), 0).toISOString().split('T')[0];
+    const { data, error } = await window.DB.supabase
+        .from('daily_inventory')
+        .select('*')
+        .gte('inventory_date', start)
+        .lte('inventory_date', end);
+    if (error) return;
+    const sum = (arr, key) => arr.reduce((s, r) => s + (parseFloat(r[key] || 0)), 0);
+    const totalSales = sum(data || [], 'total_sales');
+    const totalPurchases = sum(data || [], 'total_purchases');
+    const totalDamage = sum(data || [], 'total_damage');
+    const totalSalaries = sum(data || [], 'total_salaries');
+    const totalProfit = sum(data || [], 'net_profit');
+    const title = 'ملخص الشهر الحالي';
+    const message = `مبيعات: ${totalSales.toFixed(2)} د.أ | مشتريات: ${totalPurchases.toFixed(2)} د.أ | إتلاف: ${totalDamage.toFixed(2)} د.أ | رواتب: ${totalSalaries.toFixed(2)} د.أ | صافي الربح: ${totalProfit.toFixed(2)} د.أ`;
+    await generateNotification({ type: 'digest', title, message, severity: 'info', meta: { y, m } });
 }
 
 function exportToExcel() {
