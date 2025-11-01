@@ -954,6 +954,7 @@ async function generateNotification(payload) {
 async function evaluateNotificationsNow() {
     try {
         await checkSevenDaySalesTrend();
+        await weeklyDigestLast7Days();
         await monthlyDigestForCurrentMonth();
         await refreshNotificationsPanel();
     } catch (e) {}
@@ -962,6 +963,10 @@ async function evaluateNotificationsNow() {
 async function checkSevenDaySalesTrend() {
     if (!window.DB || !window.DB.supabase) return;
     const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const since = startOfToday.toISOString();
+    const exists = await hasRecentNotification('trend', since);
+    if (exists) return;
     const d7 = new Date(); d7.setDate(today.getDate() - 7);
     const d14 = new Date(); d14.setDate(today.getDate() - 14);
     const { data: last7, error: e1 } = await window.DB.supabase
@@ -1003,6 +1008,8 @@ async function monthlyDigestForCurrentMonth() {
     const m = (now.getMonth() + 1).toString().padStart(2, '0');
     const start = `${y}-${m}-01`;
     const end = new Date(y, parseInt(m), 0).toISOString().split('T')[0];
+    const exists = await hasRecentNotification('digest_monthly', new Date(y, parseInt(m)-1, 1).toISOString());
+    if (exists) return;
     const { data, error } = await window.DB.supabase
         .from('daily_inventory')
         .select('*')
@@ -1017,7 +1024,43 @@ async function monthlyDigestForCurrentMonth() {
     const totalProfit = sum(data || [], 'net_profit');
     const title = 'ملخص الشهر الحالي';
     const message = `مبيعات: ${totalSales.toFixed(2)} د.أ | مشتريات: ${totalPurchases.toFixed(2)} د.أ | إتلاف: ${totalDamage.toFixed(2)} د.أ | رواتب: ${totalSalaries.toFixed(2)} د.أ | صافي الربح: ${totalProfit.toFixed(2)} د.أ`;
-    await generateNotification({ type: 'digest', title, message, severity: 'info', meta: { y, m } });
+    await generateNotification({ type: 'digest_monthly', title, message, severity: 'info', meta: { y, m } });
+}
+
+async function weeklyDigestLast7Days() {
+    if (!window.DB || !window.DB.supabase) return;
+    const today = new Date();
+    const start = new Date(); start.setDate(today.getDate() - 6); start.setHours(0,0,0,0);
+    const since = new Date(); since.setDate(today.getDate() - 6); since.setHours(0,0,0,0);
+    const exists = await hasRecentNotification('digest_weekly', since.toISOString());
+    if (exists) return;
+    const { data, error } = await window.DB.supabase
+        .from('daily_inventory')
+        .select('*')
+        .gte('inventory_date', start.toISOString().split('T')[0])
+        .lte('inventory_date', today.toISOString().split('T')[0]);
+    if (error) return;
+    const sum = (arr, key) => arr.reduce((s, r) => s + (parseFloat(r[key] || 0)), 0);
+    const totalSales = sum(data || [], 'total_sales');
+    const totalPurchases = sum(data || [], 'total_purchases');
+    const totalDamage = sum(data || [], 'total_damage');
+    const totalSalaries = sum(data || [], 'total_salaries');
+    const totalProfit = sum(data || [], 'net_profit');
+    const title = 'ملخص آخر 7 أيام';
+    const message = `مبيعات: ${totalSales.toFixed(2)} د.أ | مشتريات: ${totalPurchases.toFixed(2)} د.أ | إتلاف: ${totalDamage.toFixed(2)} د.أ | رواتب: ${totalSalaries.toFixed(2)} د.أ | صافي الربح: ${totalProfit.toFixed(2)} د.أ`;
+    await generateNotification({ type: 'digest_weekly', title, message, severity: 'info', meta: { range: 'last7' } });
+}
+
+async function hasRecentNotification(type, sinceISO) {
+    if (!window.DB || !window.DB.supabase) return false;
+    const { data, error } = await window.DB.supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', type)
+        .gte('created_at', sinceISO)
+        .limit(1);
+    if (error) return false;
+    return Array.isArray(data) && data.length > 0;
 }
 
 function exportToExcel() {
