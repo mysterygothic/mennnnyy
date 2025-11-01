@@ -16,6 +16,7 @@ async function initializePage() {
     await loadInventoryHistory();
     await calculateAverageSales();
     populateMonthSelect();
+    populateChartMonthSelect();
     
     dateInput.addEventListener('change', async function() {
         await loadInventoryData(this.value);
@@ -87,11 +88,83 @@ function toggleCategory(header) {
 }
 
 function filterItems() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    document.querySelectorAll('.expense-item').forEach(item => {
-        const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(search) ? 'flex' : 'none';
+    const search = document.getElementById('searchInput').value.toLowerCase().trim();
+    const noResultsMessage = document.getElementById('noResultsMessage');
+    
+    // إذا كان البحث فارغاً، أظهر كل شيء
+    if (!search) {
+        // إظهار جميع العناصر
+        document.querySelectorAll('.expense-item').forEach(item => {
+            item.style.display = 'flex';
+        });
+        
+        // إظهار جميع الفئات الفرعية
+        document.querySelectorAll('.subcategory-group').forEach(group => {
+            group.style.display = 'block';
+        });
+        
+        // إظهار جميع الفئات الرئيسية
+        document.querySelectorAll('.expense-category-group').forEach(group => {
+            group.style.display = 'block';
+            const header = group.querySelector('.category-header');
+            if (header) {
+                header.classList.remove('collapsed');
+            }
+        });
+        
+        // إخفاء رسالة "لا توجد نتائج"
+        if (noResultsMessage) {
+            noResultsMessage.style.display = 'none';
+        }
+        
+        return;
+    }
+    
+    // البحث في العناصر
+    let totalVisibleItems = 0;
+    
+    document.querySelectorAll('.expense-category-group').forEach(categoryGroup => {
+        let categoryHasVisibleItems = false;
+        
+        // فحص كل فئة فرعية
+        categoryGroup.querySelectorAll('.subcategory-group').forEach(subGroup => {
+            let subGroupHasVisibleItems = false;
+            
+            // فحص كل عنصر في الفئة الفرعية
+            subGroup.querySelectorAll('.expense-item').forEach(item => {
+                const text = item.textContent.toLowerCase();
+                const matches = text.includes(search);
+                
+                item.style.display = matches ? 'flex' : 'none';
+                
+                if (matches) {
+                    subGroupHasVisibleItems = true;
+                    categoryHasVisibleItems = true;
+                    totalVisibleItems++;
+                }
+            });
+            
+            // إخفاء أو إظهار الفئة الفرعية بناءً على وجود عناصر مرئية
+            subGroup.style.display = subGroupHasVisibleItems ? 'block' : 'none';
+        });
+        
+        // إخفاء أو إظهار الفئة الرئيسية بناءً على وجود عناصر مرئية
+        if (categoryHasVisibleItems) {
+            categoryGroup.style.display = 'block';
+            // فتح الفئة تلقائياً عند البحث
+            const header = categoryGroup.querySelector('.category-header');
+            if (header) {
+                header.classList.remove('collapsed');
+            }
+        } else {
+            categoryGroup.style.display = 'none';
+        }
     });
+    
+    // إظهار أو إخفاء رسالة "لا توجد نتائج"
+    if (noResultsMessage) {
+        noResultsMessage.style.display = totalVisibleItems === 0 ? 'block' : 'none';
+    }
 }
 
 async function loadInventoryData(date) {
@@ -149,14 +222,22 @@ function calculateAllTotals() {
     
     let purchasesTotal = 0;
     let damageTotal = 0;
+    let salariesTotal = 0;
     
     document.querySelectorAll('.expense-input').forEach(input => {
         const value = parseFloat(input.value) || 0;
         const item = input.dataset.item;
         
-        if (item && item.includes('تلف') || item.includes('صلاحية') || item.includes('بواقي') || item.includes('مرتجعات')) {
+        // حساب الإتلاف
+        if (item && (item.includes('تلف') || item.includes('صلاحية') || item.includes('بواقي') || item.includes('مرتجعات'))) {
             damageTotal += value;
         }
+        
+        // حساب الرواتب
+        if (item && (item.includes('راتب') || item.includes('رواتب') || item.includes('أجور') || item.includes('موظف'))) {
+            salariesTotal += value;
+        }
+        
         purchasesTotal += value;
     });
     
@@ -169,25 +250,34 @@ function calculateAllTotals() {
         document.getElementById('totalSalesDisplay').textContent = salesTotal.toFixed(2) + ' د.أ';
         document.getElementById('totalPurchasesDisplay').textContent = purchasesTotal.toFixed(2) + ' د.أ';
         document.getElementById('totalDamageDisplay').textContent = damageTotal.toFixed(2) + ' د.أ';
+        document.getElementById('totalSalariesDisplay').textContent = salariesTotal.toFixed(2) + ' د.أ';
         document.getElementById('netCashDisplay').textContent = netCash.toFixed(2) + ' د.أ';
         document.getElementById('netProfitDisplay').textContent = netProfit.toFixed(2) + ' د.أ';
     }
     
-    updateDistributionChart(salesTotal, purchasesTotal, damageTotal);
+    updateDistributionChart(salesTotal, purchasesTotal, damageTotal, salariesTotal);
 }
 
 async function saveInventory() {
     try {
         const purchaseItems = {};
         let totalDamage = 0;
+        let totalSalaries = 0;
         
         document.querySelectorAll('.expense-input').forEach(input => {
             const item = input.dataset.item;
             const value = parseFloat(input.value) || 0;
             if (value > 0) {
                 purchaseItems[item] = value;
+                
+                // حساب الإتلاف
                 if (item && (item.includes('تلف') || item.includes('صلاحية') || item.includes('بواقي') || item.includes('مرتجعات'))) {
                     totalDamage += value;
+                }
+                
+                // حساب الرواتب
+                if (item && (item.includes('راتب') || item.includes('رواتب') || item.includes('أجور') || item.includes('موظف'))) {
+                    totalSalaries += value;
                 }
             }
         });
@@ -203,6 +293,7 @@ async function saveInventory() {
             total_sales: totalSales,
             purchase_items: purchaseItems,
             total_damage: totalDamage,
+            total_salaries: totalSalaries,
             notes: notes,
             created_by: currentUser?.username || 'admin'
         };
@@ -253,7 +344,7 @@ async function loadInventoryHistory() {
         const tbody = document.getElementById('historyTableBody');
         
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا يوجد سجلات</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا يوجد سجلات</td></tr>';
             return;
         }
         
@@ -262,7 +353,8 @@ async function loadInventoryHistory() {
                 <td>${new Date(record.inventory_date).toLocaleDateString('ar-JO')}</td>
                 <td style="color: #10b981; font-weight: 600;">${record.total_sales.toFixed(2)} د.أ</td>
                 <td style="color: #ef4444; font-weight: 600;">${record.total_purchases.toFixed(2)} د.أ</td>
-                <td style="color: #f59e0b; font-weight: 600;">${record.total_damage.toFixed(2)} د.أ</td>
+                <td style="color: #f59e0b; font-weight: 600;">${(record.total_damage || 0).toFixed(2)} د.أ</td>
+                <td style="color: #6366f1; font-weight: 600;">${(record.total_salaries || 0).toFixed(2)} د.أ</td>
                 <td style="color: #3b82f6; font-weight: 600;">${record.net_cash.toFixed(2)} د.أ</td>
                 <td style="color: #8b5cf6; font-weight: 600;">${record.net_profit.toFixed(2)} د.أ</td>
                 <td>
@@ -363,6 +455,7 @@ async function loadMonthlySummary() {
         document.getElementById('monthlySales').textContent = '0.00 د.أ';
         document.getElementById('monthlyPurchases').textContent = '0.00 د.أ';
         document.getElementById('monthlyDamage').textContent = '0.00 د.أ';
+        document.getElementById('monthlySalaries').textContent = '0.00 د.أ';
         document.getElementById('monthlyProfit').textContent = '0.00 د.أ';
         return;
     }
@@ -385,18 +478,21 @@ async function loadMonthlySummary() {
             document.getElementById('monthlySales').textContent = '0.00 د.أ';
             document.getElementById('monthlyPurchases').textContent = '0.00 د.أ';
             document.getElementById('monthlyDamage').textContent = '0.00 د.أ';
+            document.getElementById('monthlySalaries').textContent = '0.00 د.أ';
             document.getElementById('monthlyProfit').textContent = '0.00 د.أ';
             return;
         }
         
         const totalSales = data.reduce((sum, r) => sum + parseFloat(r.total_sales), 0);
         const totalPurchases = data.reduce((sum, r) => sum + parseFloat(r.total_purchases), 0);
-        const totalDamage = data.reduce((sum, r) => sum + parseFloat(r.total_damage), 0);
+        const totalDamage = data.reduce((sum, r) => sum + parseFloat(r.total_damage || 0), 0);
+        const totalSalaries = data.reduce((sum, r) => sum + parseFloat(r.total_salaries || 0), 0);
         const totalProfit = data.reduce((sum, r) => sum + parseFloat(r.net_profit), 0);
         
         document.getElementById('monthlySales').textContent = totalSales.toFixed(2) + ' د.أ';
         document.getElementById('monthlyPurchases').textContent = totalPurchases.toFixed(2) + ' د.أ';
         document.getElementById('monthlyDamage').textContent = totalDamage.toFixed(2) + ' د.أ';
+        document.getElementById('monthlySalaries').textContent = totalSalaries.toFixed(2) + ' د.أ';
         document.getElementById('monthlyProfit').textContent = totalProfit.toFixed(2) + ' د.أ';
         
     } catch (error) {
@@ -458,10 +554,10 @@ function initializeCharts() {
         charts.distribution = new Chart(ctx3, {
             type: 'doughnut',
             data: {
-                labels: ['المبيعات', 'المشتريات', 'الإتلاف'],
+                labels: ['المبيعات', 'المشتريات', 'الإتلاف', 'الرواتب'],
                 datasets: [{
-                    data: [0, 0, 0],
-                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b']
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#6366f1']
                 }]
             },
             options: {
@@ -473,24 +569,58 @@ function initializeCharts() {
     }
 }
 
-async function updateCharts() {
+async function updateCharts(period = 'last7', selectedMonth = null) {
     try {
         if (!window.DB || !window.DB.supabase) return;
         
-        const { data, error } = await window.DB.supabase
+        let query = window.DB.supabase
             .from('daily_inventory')
             .select('*')
-            .order('inventory_date', { ascending: false })
-            .limit(7);
+            .order('inventory_date', { ascending: true });
         
-        if (error || !data || data.length === 0) return;
+        // تحديد الفترة الزمنية
+        if (period === 'last7') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            query = query.gte('inventory_date', sevenDaysAgo.toISOString().split('T')[0]);
+        } else if (period === 'last30') {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            query = query.gte('inventory_date', thirtyDaysAgo.toISOString().split('T')[0]);
+        } else if (period === 'month' && selectedMonth) {
+            const [year, month] = selectedMonth.split('-');
+            const startDate = `${year}-${month}-01`;
+            const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+            query = query.gte('inventory_date', startDate).lte('inventory_date', endDate);
+        }
         
-        data.reverse();
+        const { data, error } = await query;
+        
+        if (error) {
+            console.error('Error loading chart data:', error);
+            return;
+        }
+        
+        if (!data || data.length === 0) {
+            // مسح الرسوم البيانية إذا لم تكن هناك بيانات
+            if (charts.salesPurchases) {
+                charts.salesPurchases.data.labels = [];
+                charts.salesPurchases.data.datasets[0].data = [];
+                charts.salesPurchases.data.datasets[1].data = [];
+                charts.salesPurchases.update();
+            }
+            if (charts.profit) {
+                charts.profit.data.labels = [];
+                charts.profit.data.datasets[0].data = [];
+                charts.profit.update();
+            }
+            return;
+        }
         
         const labels = data.map(r => new Date(r.inventory_date).toLocaleDateString('ar-JO', { month: 'short', day: 'numeric' }));
-        const sales = data.map(r => r.total_sales);
-        const purchases = data.map(r => r.total_purchases);
-        const profits = data.map(r => r.net_profit);
+        const sales = data.map(r => parseFloat(r.total_sales) || 0);
+        const purchases = data.map(r => parseFloat(r.total_purchases) || 0);
+        const profits = data.map(r => parseFloat(r.net_profit) || 0);
         
         if (charts.salesPurchases) {
             charts.salesPurchases.data.labels = labels;
@@ -505,14 +635,93 @@ async function updateCharts() {
             charts.profit.update();
         }
         
+        // تحديث عناوين الرسوم البيانية
+        updateChartTitles(period, selectedMonth);
+        
     } catch (error) {
         console.error('Error updating charts:', error);
     }
 }
 
-function updateDistributionChart(sales, purchases, damage) {
+function updateChartTitles(period, selectedMonth) {
+    const salesChartTitle = document.querySelector('.chart-container:nth-child(1) h3');
+    const profitChartTitle = document.querySelector('.chart-container:nth-child(2) h3');
+    
+    let periodText = '';
+    if (period === 'last7') {
+        periodText = 'آخر 7 أيام';
+    } else if (period === 'last30') {
+        periodText = 'آخر 30 يوم';
+    } else if (period === 'month' && selectedMonth) {
+        const [year, month] = selectedMonth.split('-');
+        const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        periodText = `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+    
+    if (salesChartTitle) {
+        salesChartTitle.textContent = `المبيعات vs المشتريات (${periodText})`;
+    }
+    if (profitChartTitle) {
+        profitChartTitle.textContent = `صافي الربح (${periodText})`;
+    }
+}
+
+function populateChartMonthSelect() {
+    const select = document.getElementById('chartMonthSelect');
+    if (!select) return;
+    
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    
+    select.innerHTML = '<option value="">اختر الشهر</option>';
+    
+    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    
+    // إضافة آخر 12 شهر
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(currentYear, currentMonth - i, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const monthStr = month.toString().padStart(2, '0');
+        const value = `${year}-${monthStr}`;
+        const label = `${monthNames[date.getMonth()]} ${year}`;
+        
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+    }
+}
+
+function updateChartsByPeriod() {
+    const periodSelect = document.getElementById('chartPeriodSelect');
+    const monthSelect = document.getElementById('chartMonthSelect');
+    const period = periodSelect.value;
+    
+    if (period === 'month') {
+        monthSelect.style.display = 'inline-block';
+        if (monthSelect.value) {
+            updateCharts('month', monthSelect.value);
+        }
+    } else {
+        monthSelect.style.display = 'none';
+        updateCharts(period);
+    }
+}
+
+function updateChartsByMonth() {
+    const monthSelect = document.getElementById('chartMonthSelect');
+    const selectedMonth = monthSelect.value;
+    
+    if (selectedMonth) {
+        updateCharts('month', selectedMonth);
+    }
+}
+
+function updateDistributionChart(sales, purchases, damage, salaries) {
     if (charts.distribution) {
-        charts.distribution.data.datasets[0].data = [sales, purchases, damage];
+        charts.distribution.data.datasets[0].data = [sales, purchases, damage, salaries || 0];
         charts.distribution.update();
     }
 }

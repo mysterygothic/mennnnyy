@@ -113,6 +113,13 @@
                         <p class="stat-number" id="totalDamageDisplay">0.00 د.أ</p>
                     </div>
                 </div>
+                <div class="stat-card salaries-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <h3>رواتب الموظفين</h3>
+                        <p class="stat-number" id="totalSalariesDisplay">0.00 د.أ</p>
+                    </div>
+                </div>
                 <div class="stat-card net-cash-card">
                     <div class="stat-icon">💵</div>
                     <div class="stat-content">
@@ -165,6 +172,10 @@
                         <div class="expenses-list" id="expensesList">
                             <!-- سيتم ملؤها تلقائياً -->
                         </div>
+                        <div id="noResultsMessage" class="no-results-message" style="display: none;">
+                            <p>❌ لا توجد نتائج للبحث</p>
+                            <small>جرب كلمات بحث أخرى</small>
+                        </div>
                     </div>
                     <div class="total-row">
                         <span>المجموع الكلي:</span>
@@ -201,6 +212,10 @@
                         <p class="stat-number" id="monthlyDamage">0.00 د.أ</p>
                     </div>
                     <div class="stat-card">
+                        <h3>إجمالي الرواتب الشهرية</h3>
+                        <p class="stat-number" id="monthlySalaries">0.00 د.أ</p>
+                    </div>
+                    <div class="stat-card">
                         <h3>صافي الربح الشهري</h3>
                         <p class="stat-number" id="monthlyProfit">0.00 د.أ</p>
                     </div>
@@ -215,7 +230,19 @@
 
             <!-- Analytics Charts -->
             <div class="charts-section">
-                <h2>📈 التحليلات البيانية</h2>
+                <div class="section-header">
+                    <h2>📈 التحليلات البيانية</h2>
+                    <div class="header-actions">
+                        <select id="chartPeriodSelect" class="month-select" onchange="updateChartsByPeriod()">
+                            <option value="last7">آخر 7 أيام</option>
+                            <option value="last30">آخر 30 يوم</option>
+                            <option value="month">شهر محدد</option>
+                        </select>
+                        <select id="chartMonthSelect" class="month-select" style="display: none;" onchange="updateChartsByMonth()">
+                            <option value="">اختر الشهر</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="charts-grid">
                     <div class="chart-container">
                         <h3>المبيعات vs المشتريات (آخر 7 أيام)</h3>
@@ -226,7 +253,7 @@
                         <canvas id="profitChart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>توزيع المبيعات والمشتريات والإتلاف</h3>
+                        <h3>توزيع المبيعات والمشتريات والإتلاف والرواتب</h3>
                         <canvas id="distributionChart"></canvas>
                     </div>
                 </div>
@@ -246,6 +273,7 @@
                                 <th>المبيعات</th>
                                 <th>المشتريات</th>
                                 <th>الإتلاف</th>
+                                <th>الرواتب</th>
                                 <th>الصافي النقدي</th>
                                 <th>صافي الربح</th>
                                 <th>الإجراءات</th>
@@ -253,7 +281,7 @@
                         </thead>
                         <tbody id="historyTableBody">
                             <tr>
-                                <td colspan="7" class="empty-state">لا يوجد سجلات</td>
+                                <td colspan="8" class="empty-state">لا يوجد سجلات</td>
                             </tr>
                         </tbody>
                     </table>
