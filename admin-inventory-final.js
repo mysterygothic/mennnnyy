@@ -25,19 +25,33 @@ async function initializePage() {
 
 async function loadPurchaseCategories() {
     try {
+        // التحقق من أن Supabase جاهز
+        if (!window.DB || !window.DB.supabase) {
+            console.warn('⚠️ Supabase not ready yet, retrying...');
+            // إعادة المحاولة بعد ثانية
+            setTimeout(loadPurchaseCategories, 1000);
+            return;
+        }
+        
+        console.log('📦 Loading purchase categories...');
+        
         const { data, error } = await window.DB.supabase
             .from('expense_categories')
             .select('*')
             .eq('is_active', true)
             .order('display_order');
         
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Error loading categories:', error);
+            throw error;
+        }
         
         purchaseCategories = data || [];
+        console.log(`✅ Loaded ${purchaseCategories.length} categories`);
         renderExpensesList();
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error in loadPurchaseCategories:', error);
         purchaseCategories = [];
         renderExpensesList();
     }
@@ -46,6 +60,17 @@ async function loadPurchaseCategories() {
 function renderExpensesList() {
     const list = document.getElementById('expensesList');
     if (!list) return;
+    
+    // إذا لم تكن هناك فئات، أظهر رسالة تحميل
+    if (purchaseCategories.length === 0) {
+        list.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                <p style="font-size: 1.2rem; margin-bottom: 10px;">⏳ جاري تحميل الفئات...</p>
+                <small>إذا استمرت المشكلة، تحقق من اتصال قاعدة البيانات</small>
+            </div>
+        `;
+        return;
+    }
     
     const grouped = {};
     purchaseCategories.forEach(item => {
