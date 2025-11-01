@@ -839,12 +839,49 @@ async function initNotifications() {
         await refreshNotificationsPanel();
         await evaluateNotificationsNow();
     } catch (e) {}
+
+    // Attach global handlers once
+    if (!window.__notifHandlersAttached) {
+        window.__notifHandlersAttached = true;
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('notificationsPanel');
+            const bell = document.getElementById('notificationsBell');
+            if (!panel) return;
+            const isOpen = panel.style.display === 'block';
+            const clickInsidePanel = panel.contains(e.target);
+            const clickOnBell = bell && bell.contains(e.target);
+            if (isOpen && !clickInsidePanel && !clickOnBell) {
+                closeNotificationsPanel();
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeNotificationsPanel();
+            }
+        });
+    }
+}
+
+function openNotificationsPanel() {
+    const panel = document.getElementById('notificationsPanel');
+    if (!panel) return;
+    panel.style.display = 'block';
+}
+
+function closeNotificationsPanel() {
+    const panel = document.getElementById('notificationsPanel');
+    if (!panel) return;
+    panel.style.display = 'none';
 }
 
 function toggleNotificationsPanel() {
     const panel = document.getElementById('notificationsPanel');
     if (!panel) return;
-    panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
+    if (panel.style.display === 'block') {
+        closeNotificationsPanel();
+    } else {
+        openNotificationsPanel();
+    }
 }
 
 function updateNotificationsBadge(count) {
@@ -876,15 +913,21 @@ async function refreshNotificationsPanel() {
 
 function renderNotificationItem(n) {
     const color = n.severity === 'critical' ? '#ef4444' : n.severity === 'warning' ? '#f59e0b' : '#10b981';
+    const icon = n.severity === 'critical' ? '⛔' : n.severity === 'warning' ? '⚠️' : 'ℹ️';
     const bg = n.is_read ? '#ffffff' : '#f8fafc';
     const ts = new Date(n.created_at).toLocaleString('ar-JO');
     return `
-      <div style="background:${bg}; border:1px solid #f1f5f9; border-radius:10px; padding:10px 12px; margin:8px;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-          <div style="font-weight:700; color:${color};">${n.title || ''}</div>
-          <div style="font-size:12px; color:#6b7280;">${ts}</div>
+      <div style="background:${bg}; border:1px solid #eef2f7; border-radius:12px; padding:12px; margin:10px 8px;">
+        <div style="display:flex; gap:10px;">
+          <div style="flex:0 0 auto; width:28px; height:28px; border-radius:8px; background:${color}1A; color:${color}; display:flex; align-items:center; justify-content:center; font-size:16px;">${icon}</div>
+          <div style="flex:1 1 auto; min-width:0;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <div style="font-weight:800; color:#0f172a;">${n.title || ''}</div>
+              <div style="font-size:12px; color:#64748b; white-space:nowrap;">${ts}</div>
+            </div>
+            <div style="margin-top:6px; color:#334155; line-height:1.5;">${n.message || ''}</div>
+          </div>
         </div>
-        <div style="margin-top:6px; color:#374151;">${n.message || ''}</div>
       </div>
     `;
 }

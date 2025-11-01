@@ -91,14 +91,15 @@
             </div>
 
             <!-- Notifications Panel -->
-            <div id="notificationsPanel" style="position: fixed; top: 72px; right: 16px; width: 360px; max-height: 70vh; overflow: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: none; z-index: 10000;">
-                <div style="display:flex; align-items:center; justify-content:space-between; padding: 12px 14px; border-bottom:1px solid #f3f4f6; background:#f9fafb; border-top-left-radius:12px; border-top-right-radius:12px;">
-                    <div style="font-weight:700;">الإشعارات</div>
-                    <div>
+            <div id="notificationsPanel" role="dialog" aria-modal="true" aria-labelledby="notificationsTitle" style="position: fixed; top: 72px; right: 16px; width: 380px; max-height: 72vh; overflow: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 16px 40px rgba(2,6,23,0.18); display: none; z-index: 10000;">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding: 12px 12px; border-bottom:1px solid #eef2f7; background:#fbfcfe; border-top-left-radius:12px; border-top-right-radius:12px;">
+                    <div id="notificationsTitle" style="font-weight:800; color:#0f172a;">الإشعارات</div>
+                    <div style="display:flex; gap:8px;">
                         <button class="icon-button" onclick="markAllNotificationsRead()" style="font-size: 12px; padding: 6px 10px; border:1px solid #e5e7eb; border-radius:8px; background:white;">تحديد الكل كمقروء</button>
+                        <button class="icon-button" onclick="toggleNotificationsPanel()" aria-label="إغلاق" title="إغلاق" style="font-size: 14px; padding: 6px 10px; border:1px solid #e5e7eb; border-radius:8px; background:white;">✕</button>
                     </div>
                 </div>
-                <div id="notificationsList" style="padding: 8px 8px;"></div>
+                <div id="notificationsList" style="padding: 10px;"></div>
             </div>
 
             <!-- Statistics Cards -->
