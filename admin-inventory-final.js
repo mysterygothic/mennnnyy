@@ -15,6 +15,8 @@ async function initializePage() {
     initializeCharts();
     await loadInventoryHistory();
     await calculateAverageSales();
+    populateYearSelect();
+    populateChartYearSelect();
     populateMonthSelect();
     populateChartMonthSelect();
     
@@ -453,22 +455,66 @@ async function calculateAverageSales() {
     }
 }
 
+// ملء قائمة السنوات للجرد الشهري
+function populateYearSelect() {
+    const select = document.getElementById('yearSelect');
+    if (!select) return;
+    
+    const currentYear = new Date().getFullYear();
+    select.innerHTML = '<option value="">اختر السنة</option>';
+    
+    // إضافة السنوات من 2024 إلى السنة الحالية + 2
+    for (let year = 2024; year <= currentYear + 2; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    }
+}
+
+// ملء قائمة الأشهر للجرد الشهري
 function populateMonthSelect() {
-    const select = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    if (!yearSelect || !monthSelect) return;
+    
+    const selectedYear = yearSelect.value;
+    if (!selectedYear) {
+        monthSelect.innerHTML = '<option value="">اختر السنة أولاً</option>';
+        return;
+    }
+    
     const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
     
-    select.innerHTML = '<option value="">اختر الشهر</option>';
+    monthSelect.innerHTML = '<option value="">اختر الشهر</option>';
     
-    for (let i = 0; i < 12; i++) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const monthName = date.toLocaleDateString('ar-JO', { month: 'long', year: 'numeric' });
+    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    
+    // إضافة جميع الأشهر من 1-12
+    for (let month = 1; month <= 12; month++) {
+        const monthStr = month.toString().padStart(2, '0');
+        const value = `${selectedYear}-${monthStr}`;
         
         const option = document.createElement('option');
-        option.value = `${year}-${String(month).padStart(2, '0')}`;
-        option.textContent = monthName;
-        select.appendChild(option);
+        option.value = value;
+        option.textContent = `${monthNames[month - 1]} ${selectedYear}`;
+        
+        // تحديد الشهر الحالي تلقائياً
+        if (parseInt(selectedYear) === currentYear && month === currentMonth) {
+            option.selected = true;
+        }
+        
+        monthSelect.appendChild(option);
+    }
+    
+    // تحميل البيانات إذا كان الشهر الحالي محدد
+    if (parseInt(selectedYear) === currentYear) {
+        loadMonthlySummary();
     }
 }
 
@@ -691,47 +737,83 @@ function updateChartTitles(period, selectedMonth) {
     }
 }
 
-function populateChartMonthSelect() {
-    const select = document.getElementById('chartMonthSelect');
+// ملء قائمة السنوات للرسوم البيانية
+function populateChartYearSelect() {
+    const select = document.getElementById('chartYearSelect');
     if (!select) return;
+    
+    const currentYear = new Date().getFullYear();
+    select.innerHTML = '<option value="">اختر السنة</option>';
+    
+    // إضافة السنوات من 2024 إلى السنة الحالية + 2
+    for (let year = 2024; year <= currentYear + 2; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    }
+}
+
+// ملء قائمة الأشهر للرسوم البيانية
+function populateChartMonthSelect() {
+    const yearSelect = document.getElementById('chartYearSelect');
+    const monthSelect = document.getElementById('chartMonthSelect');
+    if (!yearSelect || !monthSelect) return;
+    
+    const selectedYear = yearSelect.value;
+    if (!selectedYear) {
+        monthSelect.innerHTML = '<option value="">اختر السنة أولاً</option>';
+        return;
+    }
     
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth();
+    const currentMonth = currentDate.getMonth() + 1;
     
-    select.innerHTML = '<option value="">اختر الشهر</option>';
+    monthSelect.innerHTML = '<option value="">اختر الشهر</option>';
     
     const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
     
-    // إضافة آخر 12 شهر
-    for (let i = 0; i < 12; i++) {
-        const date = new Date(currentYear, currentMonth - i, 1);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
+    // إضافة جميع الأشهر من 1-12
+    for (let month = 1; month <= 12; month++) {
         const monthStr = month.toString().padStart(2, '0');
-        const value = `${year}-${monthStr}`;
-        const label = `${monthNames[date.getMonth()]} ${year}`;
+        const value = `${selectedYear}-${monthStr}`;
         
         const option = document.createElement('option');
         option.value = value;
-        option.textContent = label;
-        select.appendChild(option);
+        option.textContent = `${monthNames[month - 1]} ${selectedYear}`;
+        
+        // تحديد الشهر الحالي تلقائياً
+        if (parseInt(selectedYear) === currentYear && month === currentMonth) {
+            option.selected = true;
+        }
+        
+        monthSelect.appendChild(option);
+    }
+    
+    // تحديث الرسوم إذا كان الشهر الحالي محدد
+    if (parseInt(selectedYear) === currentYear) {
+        updateChartsByMonth();
     }
 }
 
 function updateChartsByPeriod() {
     const periodSelect = document.getElementById('chartPeriodSelect');
+    const yearSelect = document.getElementById('chartYearSelect');
     const monthSelect = document.getElementById('chartMonthSelect');
-    const period = periodSelect.value;
     
-    if (period === 'month') {
+    if (periodSelect.value === 'month') {
+        yearSelect.style.display = 'inline-block';
         monthSelect.style.display = 'inline-block';
-        if (monthSelect.value) {
-            updateCharts('month', monthSelect.value);
-        }
+        // تحديث قائمة الأشهر بناءً على السنة المحددة
+        populateChartMonthSelect();
     } else {
+        yearSelect.style.display = 'none';
         monthSelect.style.display = 'none';
-        updateCharts(period);
+        updateCharts(periodSelect.value);
     }
 }
 

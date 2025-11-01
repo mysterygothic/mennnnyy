@@ -189,6 +189,9 @@
                 <div class="section-header">
                     <h2>📅 الجرد الشهري</h2>
                     <div class="header-actions">
+                        <select id="yearSelect" class="month-select" onchange="populateMonthSelect()">
+                            <option value="">اختر السنة</option>
+                        </select>
                         <select id="monthSelect" class="month-select" onchange="loadMonthlySummary()">
                             <option value="">اختر الشهر</option>
                         </select>
@@ -237,6 +240,9 @@
                             <option value="last7">آخر 7 أيام</option>
                             <option value="last30">آخر 30 يوم</option>
                             <option value="month">شهر محدد</option>
+                        </select>
+                        <select id="chartYearSelect" class="month-select" style="display: none;" onchange="populateChartMonthSelect()">
+                            <option value="">اختر السنة</option>
                         </select>
                         <select id="chartMonthSelect" class="month-select" style="display: none;" onchange="updateChartsByMonth()">
                             <option value="">اختر الشهر</option>
