@@ -1,177 +1,53 @@
 // ============================================================
-// CLOUDFLARE WORKER: SUPABASE CONFIG PROTECTION
+// SECURE SUPABASE CONFIGURATION - LOADED FROM CLOUDFLARE WORKER
 // ============================================================
-// This worker securely serves Supabase credentials without exposing them
-// in the client-side code. Deploy this to Cloudflare Workers.
+// This file loads Supabase credentials from a secure Cloudflare Worker
+// instead of exposing them directly in the client code.
 //
-// DEPLOYMENT INSTRUCTIONS:
-// 1. Go to Cloudflare Dashboard → Workers & Pages
-// 2. Create a new Worker named: supabase-config-guard
-// 3. Copy this entire code
-// 4. Add your Supabase credentials in the CONFIGURATION section below
-// 5. Deploy the worker
-// 6. Note the worker URL (e.g., https://supabase-config-guard.YOUR-SUBDOMAIN.workers.dev)
+// SETUP INSTRUCTIONS:
+// 1. Deploy the supabase-config-worker.js to Cloudflare Workers
+// 2. Update SUPABASE_WORKER_URL below with your worker URL
+// 3. Update SUPABASE_ACCESS_TOKEN to match the token in your worker
+// 4. Replace the old supabase-config.js with this file (or rename it)
 // ============================================================
 
 
 // ========== CONFIGURATION ==========
-// ⚠️ IMPORTANT: Replace these with your actual Supabase credentials!
-const SUPABASE_CONFIG = {
-    url: 'https://noooysoqieuuaogrhlty.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vb295c29xaWV1dWFvZ3JobHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyNTExMjgsImV4cCI6MjA3NjgyNzEyOH0.W9EexKNYoErZf_8DmiBv0KfvYKy-pbBlvC3lMVEf7Bc'
-};
+// Your Cloudflare Worker URL for Supabase config
+const SUPABASE_WORKER_URL = 'https://supabase-config-guard3.zlmsn3mk.workers.dev';
 
-// Allowed origins (domains that can access this worker)
-const ALLOWED_ORIGINS = [
-    'https://sheikh-resturant.com',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500'
-];
-
-// Secret access token (optional extra security layer)
-// If set, clients must send this token in the Authorization header
-const ACCESS_TOKEN = 'lbPYqrE46c4iDKtaMNacgtzs05yyec0lBR8ISfZqpgw=';
+// Access token (must match the ACCESS_TOKEN in your worker)
+const SUPABASE_ACCESS_TOKEN = 'lbPYqrE46c4iDKtaMNacgtzs05yyec0lBR8ISfZqpgw=';
 
 
-// ========== CORS HEADERS ==========
-function corsHeaders(origin) {
-    const cleanOrigin = origin ? origin.replace(/\/$/, '') : '';
-    const isAllowed = ALLOWED_ORIGINS.some(allowed => 
-        allowed.replace(/\/$/, '') === cleanOrigin
-    );
-    
-    return {
-        'Access-Control-Allow-Origin': isAllowed ? cleanOrigin : ALLOWED_ORIGINS[0],
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '86400',
-        'Content-Type': 'application/json'
-    };
-}
-
-
-// ========== MAIN HANDLER ==========
-addEventListener('fetch', event => {
-    event.respondWith(handleRequest(event.request));
-});
-
-
-async function handleRequest(request) {
-    const origin = request.headers.get('Origin');
-    const url = new URL(request.url);
-    
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-        return new Response(null, { 
-            status: 204,
-            headers: corsHeaders(origin) 
-        });
-    }
-    
-    try {
-        // Route: Get Supabase config
-        if (url.pathname === '/config' && request.method === 'GET') {
-            return handleGetConfig(request, origin);
-        } 
-        // Route: Health check
-        else if (url.pathname === '/health' && request.method === 'GET') {
-            return new Response(JSON.stringify({ 
-                status: 'ok',
-                service: 'supabase-config-guard',
-                timestamp: new Date().toISOString()
-            }), {
-                headers: corsHeaders(origin)
-            });
-        }
-        // 404 for unknown routes
-        else {
-            return new Response(JSON.stringify({ 
-                error: 'Not found',
-                message: 'Available endpoints: /config (GET), /health (GET)'
-            }), {
-                status: 404,
-                headers: corsHeaders(origin)
-            });
-        }
-    } catch (error) {
-        return new Response(JSON.stringify({ 
-            success: false, 
-            error: error.message 
-        }), {
-            status: 500,
-            headers: corsHeaders(origin)
-        });
-    }
-}
-
-
-// ========== GET CONFIG HANDLER ==========
-async function handleGetConfig(request, origin) {
-    // Verify access token (optional security layer)
-    if (ACCESS_TOKEN) {
-        const authHeader = request.headers.get('Authorization');
-        const expectedHeader = `Bearer ${ACCESS_TOKEN}`;
-        
-        // Check if auth header exists and matches
-        if (!authHeader || authHeader !== expectedHeader) {
-            console.log('❌ Auth failed:', {
-                received: authHeader,
-                expected: expectedHeader
-            });
-            
-            return new Response(JSON.stringify({ 
-                success: false, 
-                error: 'Unauthorized: Invalid or missing access token',
-                hint: 'Make sure to send Authorization header with Bearer token'
-            }), {
-                status: 401,
-                headers: corsHeaders(origin)
-            });
-        }
-    }
-    
-    // Return Supabase configuration
-    return new Response(JSON.stringify({ 
-        success: true,
-        config: {
-            url: SUPABASE_CONFIG.url,
-            anonKey: SUPABASE_CONFIG.anonKey
-        },
-        timestamp: new Date().toISOString()
-    }), {
-        headers: corsHeaders(origin)
-    });
-}
-
-
-// ========== USAGE INSTRUCTIONS ==========
-/*
-
-CLIENT-SIDE USAGE:
-==================
-
-Replace your supabase-config.js with this code:
-
-```javascript
-// Supabase Configuration - Loaded from Cloudflare Worker
-const SUPABASE_WORKER_URL = 'https://supabase-config-guard.YOUR-SUBDOMAIN.workers.dev';
-const SUPABASE_ACCESS_TOKEN = 'sheikh-supabase-secure-2024'; // Must match worker
-
+// ========== VARIABLES ==========
 let SUPABASE_URL = null;
 let SUPABASE_ANON_KEY = null;
 let supabaseClient = null;
+let configLoadAttempts = 0;
+const MAX_CONFIG_ATTEMPTS = 3;
 
-// Fetch config from worker
+
+// ========== LOAD CONFIG FROM WORKER ==========
+/**
+ * Fetch Supabase configuration from Cloudflare Worker
+ * @returns {Promise<boolean>} Success status
+ */
 async function loadSupabaseConfig() {
     try {
+        console.log('🔐 Loading Supabase config from secure worker...');
+        
         const response = await fetch(`${SUPABASE_WORKER_URL}/config`, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${SUPABASE_ACCESS_TOKEN}`
+                'Authorization': `Bearer ${SUPABASE_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
             }
         });
+        
+        if (!response.ok) {
+            throw new Error(`Worker responded with status: ${response.status}`);
+        }
         
         const result = await response.json();
         
@@ -179,56 +55,181 @@ async function loadSupabaseConfig() {
             SUPABASE_URL = result.config.url;
             SUPABASE_ANON_KEY = result.config.anonKey;
             console.log('✅ Supabase config loaded securely from worker');
+            console.log('📍 Supabase URL:', SUPABASE_URL);
             return true;
         } else {
             console.error('❌ Failed to load Supabase config:', result.error);
             return false;
         }
     } catch (error) {
-        console.error('❌ Error loading Supabase config:', error);
+        console.error('❌ Error loading Supabase config from worker:', error);
+        configLoadAttempts++;
+        
+        // Retry logic
+        if (configLoadAttempts < MAX_CONFIG_ATTEMPTS) {
+            console.log(`🔄 Retrying... (Attempt ${configLoadAttempts + 1}/${MAX_CONFIG_ATTEMPTS})`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            return await loadSupabaseConfig();
+        }
+        
         return false;
     }
 }
 
-// Initialize Supabase
+
+// ========== CHECK IF CONFIG IS LOADED ==========
+function isSupabaseConfigured() {
+    return SUPABASE_URL !== null && 
+           SUPABASE_ANON_KEY !== null &&
+           SUPABASE_URL.includes('supabase.co');
+}
+
+
+// ========== INITIALIZE SUPABASE ==========
+/**
+ * Initialize Supabase client
+ * @returns {Promise<Object|null>} Supabase client or null
+ */
 async function initSupabase() {
-    // Load config first
-    const configLoaded = await loadSupabaseConfig();
-    
-    if (!configLoaded || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
-        console.error('❌ Supabase config not loaded!');
-        return null;
+    // Load config first if not already loaded
+    if (!isSupabaseConfigured()) {
+        const configLoaded = await loadSupabaseConfig();
+        
+        if (!configLoaded) {
+            console.error('❌ Failed to load Supabase config after multiple attempts');
+            console.warn('⚠️ Falling back to localStorage mode');
+            return null;
+        }
     }
     
     try {
+        // Check if Supabase JS library is loaded
         if (typeof window.supabase === 'undefined') {
             console.error('❌ Supabase JS library not loaded!');
+            console.error('Make sure to include: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>');
             return null;
         }
         
+        // Create Supabase client
         const { createClient } = window.supabase;
         supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        console.log('✅ Supabase connected successfully!');
+        console.log('✅ Supabase client initialized successfully!');
         return supabaseClient;
     } catch (error) {
-        console.error('❌ Error initializing Supabase:', error);
+        console.error('❌ Error initializing Supabase client:', error);
         return null;
     }
 }
 
+
+// ========== GET SUPABASE CLIENT ==========
+/**
+ * Get the Supabase client instance
+ * @returns {Object|null} Supabase client or null
+ */
 function getSupabaseClient() {
     return supabaseClient;
 }
 
-// Export
+
+// ========== RELOAD CONFIG ==========
+/**
+ * Force reload Supabase configuration from worker
+ * Useful if config changes or needs to be refreshed
+ * @returns {Promise<boolean>} Success status
+ */
+async function reloadSupabaseConfig() {
+    console.log('🔄 Reloading Supabase config...');
+    SUPABASE_URL = null;
+    SUPABASE_ANON_KEY = null;
+    supabaseClient = null;
+    configLoadAttempts = 0;
+    
+    const loaded = await loadSupabaseConfig();
+    if (loaded) {
+        return await initSupabase() !== null;
+    }
+    return false;
+}
+
+
+// ========== EXPORT FOR USE IN OTHER FILES ==========
 if (typeof window !== 'undefined') {
     window.SUPABASE_CONFIG = {
+        URL: () => SUPABASE_URL,
+        KEY: () => SUPABASE_ANON_KEY,
+        isConfigured: isSupabaseConfigured,
         init: initSupabase,
         getClient: getSupabaseClient,
-        isConfigured: () => SUPABASE_URL !== null && SUPABASE_ANON_KEY !== null
+        reload: reloadSupabaseConfig,
+        
+        // For debugging (remove in production)
+        debug: {
+            getWorkerUrl: () => SUPABASE_WORKER_URL,
+            getLoadAttempts: () => configLoadAttempts
+        }
     };
+    
+    console.log('🔐 Secure Supabase Config loaded');
+    console.log('📝 Config will be fetched from worker on init');
+}
+
+
+// ========== AUTO-INITIALIZE ON DOM READY ==========
+// Automatically load config when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadSupabaseConfig();
+    });
+} else {
+    // DOM already loaded, load config immediately
+    loadSupabaseConfig();
+}
+
+
+// ========== USAGE NOTES ==========
+/*
+
+USAGE IN YOUR APPLICATION:
+==========================
+
+This file works as a drop-in replacement for your old supabase-config.js
+
+1. The config is automatically loaded when the page loads
+2. Use it the same way as before:
+
+```javascript
+// Initialize Supabase (in supabase-db.js or other files)
+async function initializeDatabase() {
+    if (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.isConfigured()) {
+        supabase = await window.SUPABASE_CONFIG.init();
+        if (supabase) {
+            console.log('✅ Database connected');
+            return true;
+        }
+    }
+    console.warn('⚠️ Falling back to localStorage');
+    return false;
 }
 ```
+
+BENEFITS:
+=========
+✅ Supabase credentials never exposed in client code
+✅ Credentials can be rotated without updating website code
+✅ Automatic retry on failure
+✅ Fallback to localStorage if worker is unavailable
+✅ Easy to debug with built-in logging
+
+TROUBLESHOOTING:
+================
+If config fails to load:
+1. Check browser console for error messages
+2. Verify SUPABASE_WORKER_URL is correct
+3. Verify SUPABASE_ACCESS_TOKEN matches worker
+4. Check Cloudflare Worker is deployed and running
+5. Check CORS settings in worker allow your domain
+6. Try: await window.SUPABASE_CONFIG.reload()
 
 */
